@@ -6,9 +6,10 @@ plugins {
 }
 
 android {
+    ndkVersion = "27.0.12077973" // <--- Keep this line
     namespace = "com.example.flippra"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    // ndkVersion = flutter.ndkVersion // <--- REMOVE OR COMMENT OUT THIS LINE
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11

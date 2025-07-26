@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flippra/screens/shop2_screen.dart'; // Import shop2_screen.dart
 
 class ShopScreen extends StatefulWidget {
   const ShopScreen({super.key});
@@ -150,6 +151,32 @@ class _ShopScreenState extends State<ShopScreen> {
                 ),
                 child: const Icon(
                   Icons.arrow_back,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+            ),
+          ),
+
+          // New: Top Right Button to navigate to Shop2Screen
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 10, // Adjust top padding for status bar
+            right: 10,
+            child: GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const Shop2Screen()), // Navigate to Shop2Screen
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.4), // Semi-transparent black background
+                  borderRadius: BorderRadius.circular(20), // Rounded corners
+                ),
+                child: const Icon(
+                  Icons.arrow_forward, // Forward arrow icon
                   color: Colors.white,
                   size: 24,
                 ),

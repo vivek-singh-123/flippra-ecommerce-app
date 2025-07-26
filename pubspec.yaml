@@ -11,21 +11,20 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
   cupertino_icons: ^1.0.8
+  video_player: ^2.8.1 # <-- THIS IS THE CRUCIAL LINE, ENSURE THIS INDENTATION
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
-
   flutter_lints: ^5.0.0
-
 
 flutter:
   uses-material-design: true
 
   assets:
+    - assets/
+    - assets/videos/
     - assets/icons/whatsapp.png
     - assets/icons/man.png
     - assets/icons/woman.png
@@ -49,3 +48,6 @@ flutter:
     - assets/icons/box.png
     - assets/icons/toggle.png
     - assets/icons/video_icon.png
+    - assets/images/map_placeholder.png
+    - assets/videos/Login_final.mp4
+    - assets/videos/otp.mp4

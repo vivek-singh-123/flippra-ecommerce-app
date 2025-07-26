@@ -11,22 +11,20 @@ class GenderConfirmScreen extends StatefulWidget {
 class _GenderConfirmScreenState extends State<GenderConfirmScreen> {
   String? _selectedGender; // To store the selected gender: 'Male' or 'Female'
 
-  void _confirmGender() {
-    if (_selectedGender != null) {
-      print('Selected Gender: $_selectedGender');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gender selected: $_selectedGender')),
-      );
-      // Navigate to the SignUpScreen after gender is confirmed
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => SignUpScreen()), // Removed 'const' here
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select your gender.')),
-      );
-    }
+  // Removed _confirmGender method as navigation will happen on tap
+
+  // New method to handle gender selection and direct navigation
+  void _onGenderSelected(String gender) {
+    setState(() {
+      _selectedGender = gender;
+    });
+    print('Selected Gender: $gender. Navigating to Sign Up Screen...');
+    // Navigate to the SignUpScreen immediately after gender is selected
+    // Using pushReplacement to prevent going back to GenderConfirmScreen from SignUpScreen
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => SignUpScreen()),
+    );
   }
 
   @override
@@ -54,7 +52,7 @@ class _GenderConfirmScreenState extends State<GenderConfirmScreen> {
             ),
           ),
 
-          // Content (Gender selection and Confirm button)
+          // Content (Gender selection)
           Positioned(
             top: MediaQuery.of(context).size.height * 0.25, // Adjust position to be on top of teal background
             left: 0,
@@ -82,26 +80,7 @@ class _GenderConfirmScreenState extends State<GenderConfirmScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 50), // Space between cards and button
-                  // Confirm Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 55,
-                    child: ElevatedButton(
-                      onPressed: _confirmGender,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange, // Orange color for button
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        elevation: 3,
-                      ),
-                      child: Text(
-                        'Confirm',
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 18, color: Colors.white),
-                      ),
-                    ),
-                  ),
+                  // The Confirm Button is removed from here
                 ],
               ),
             ),
@@ -119,11 +98,8 @@ class _GenderConfirmScreenState extends State<GenderConfirmScreen> {
       bool isSelected,
       ) {
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedGender = gender;
-        });
-      },
+      // Changed onTap to call the new _onGenderSelected method
+      onTap: () => _onGenderSelected(gender),
       child: Column(
         children: [
           Container(
