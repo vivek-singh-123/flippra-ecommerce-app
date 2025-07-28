@@ -36,6 +36,7 @@ flutter:
     - assets/icons/tamil.png
     - assets/icons/bengali.png
     - assets/icons/volume.png
+    - assets/icons/mute.png
     - assets/icons/banner_placeholder.png
     - assets/icons/doctor_placeholder.png
     - assets/icons/settings_icon.png
@@ -51,3 +52,4 @@ flutter:
     - assets/images/map_placeholder.png
     - assets/videos/Login_final.mp4
     - assets/videos/otp.mp4
+    - assets/videos/world_map.mp4

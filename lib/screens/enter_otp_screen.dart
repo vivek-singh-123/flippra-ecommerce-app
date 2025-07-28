@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flippra/screens/gender_confirm_screen.dart'; // Import the GenderConfirmScreen
-import 'package:video_player/video_player.dart'; // <--- Import video_player package
+import 'package:flippra/screens/gender_confirm_screen.dart';
+import 'package:video_player/video_player.dart';
 
 class EnterOtpScreen extends StatefulWidget {
-  final String phoneNumber; // To display the number OTP was sent to
+  final String phoneNumber;
 
   const EnterOtpScreen({super.key, required this.phoneNumber});
 
@@ -12,34 +12,45 @@ class EnterOtpScreen extends StatefulWidget {
 }
 
 class _EnterOtpScreenState extends State<EnterOtpScreen> {
-  late VideoPlayerController _videoController; // <--- Declare video controller
+  late VideoPlayerController _videoController;
 
-  // Controllers for each OTP digit input
   final TextEditingController _otpDigit1Controller = TextEditingController();
   final TextEditingController _otpDigit2Controller = TextEditingController();
   final TextEditingController _otpDigit3Controller = TextEditingController();
   final TextEditingController _otpDigit4Controller = TextEditingController();
 
-  // Focus nodes to move focus between OTP input fields
   final FocusNode _focusNode1 = FocusNode();
   final FocusNode _focusNode2 = FocusNode();
   final FocusNode _focusNode3 = FocusNode();
   final FocusNode _focusNode4 = FocusNode();
 
+  bool get _isOtpValid =>
+      _otpDigit1Controller.text.length == 1 &&
+          _otpDigit2Controller.text.length == 1 &&
+          _otpDigit3Controller.text.length == 1 &&
+          _otpDigit4Controller.text.length == 1;
+
   @override
   void initState() {
     super.initState();
-    // Initialize the video controller with Login_final.mp4
-    _videoController = VideoPlayerController.asset('assets/videos/otp.mp4') // <--- Using Login_final.mp4
+    _videoController = VideoPlayerController.asset('assets/videos/otp.mp4')
       ..initialize().then((_) {
-        // Ensure the first frame is shown and then play the video
         _videoController.play();
-        _videoController.setLooping(true); // Loop the video continuously
-        setState(() {}); // Update the UI once the video is initialized
+        _videoController.setLooping(true);
+        setState(() {});
       }).catchError((error) {
-        // Log any errors during video initialization
-        print("Error initializing video on EnterOtpScreen: $error"); // Added screen name for clarity
+        print("Error initializing video on EnterOtpScreen: $error");
       });
+
+    // Add listeners to update state on OTP changes
+    _otpDigit1Controller.addListener(_onOtpChanged);
+    _otpDigit2Controller.addListener(_onOtpChanged);
+    _otpDigit3Controller.addListener(_onOtpChanged);
+    _otpDigit4Controller.addListener(_onOtpChanged);
+  }
+
+  void _onOtpChanged() {
+    setState(() {}); // Refresh button enable state
   }
 
   @override
@@ -52,56 +63,52 @@ class _EnterOtpScreenState extends State<EnterOtpScreen> {
     _focusNode2.dispose();
     _focusNode3.dispose();
     _focusNode4.dispose();
-    _videoController.dispose(); // <--- CRITICAL: Dispose the video controller
+    _videoController.dispose();
     super.dispose();
   }
 
   void _verifyOtp() {
-    // Combine OTP digits (optional, but good for logging)
     final String enteredOtp = _otpDigit1Controller.text +
         _otpDigit2Controller.text +
         _otpDigit3Controller.text +
         _otpDigit4Controller.text;
 
     print('OTP entered: $enteredOtp for ${widget.phoneNumber}');
-    // Removed OTP authentication. Any input will now navigate.
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('OTP accepted. Navigating...')),
     );
-    // Navigate to the GenderConfirmScreen
+
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const GenderConfirmScreen()),
     );
   }
 
-  // Helper function to create an OTP digit input field
   Widget _otpDigitField(TextEditingController controller, FocusNode currentFocusNode, FocusNode? nextFocusNode) {
     return SizedBox(
-      width: 60, // Width for each digit box
-      height: 60, // Height for each digit box
+      width: 60,
+      height: 60,
       child: TextField(
         controller: controller,
         focusNode: currentFocusNode,
         keyboardType: TextInputType.number,
-        maxLength: 1, // Only one digit per field
+        maxLength: 1,
         textAlign: TextAlign.center,
         style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87),
         decoration: InputDecoration(
-          counterText: "", // Hide the character counter
+          counterText: "",
           filled: true,
           fillColor: Colors.white,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10.0),
             borderSide: BorderSide.none,
           ),
-          contentPadding: EdgeInsets.zero, // Remove default padding
+          contentPadding: EdgeInsets.zero,
         ),
         onChanged: (value) {
           if (value.length == 1 && nextFocusNode != null) {
-            nextFocusNode.requestFocus(); // Move focus to next field
+            nextFocusNode.requestFocus();
           } else if (value.isEmpty && currentFocusNode != _focusNode1) {
-            // If deleting and not the first field, move focus back
             currentFocusNode.previousFocus();
           }
         },
@@ -114,14 +121,13 @@ class _EnterOtpScreenState extends State<EnterOtpScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // Video background section (replaces the main white background)
           Positioned(
             top: 100,
             left: 0,
             right: 0,
-            height: MediaQuery.of(context).size.height * 0.6, // <--- Increased height for video
+            height: MediaQuery.of(context).size.height * 0.64,
             child: Container(
-              color: Colors.white, // Fallback color if video not ready
+              color: Colors.white,
               child: _videoController.value.isInitialized
                   ? FittedBox(
                 fit: BoxFit.cover,
@@ -134,13 +140,11 @@ class _EnterOtpScreenState extends State<EnterOtpScreen> {
                   ),
                 ),
               )
-                  : const SizedBox(), // Show nothing if video not initialized yet
+                  : const SizedBox(),
             ),
           ),
-
-          // Teal background section
           Positioned(
-            top: MediaQuery.of(context).size.height * 0.4, // <--- Starts 40% from the top
+            top: MediaQuery.of(context).size.height * 0.31,
             left: 0,
             right: 0,
             bottom: 0,
@@ -154,10 +158,8 @@ class _EnterOtpScreenState extends State<EnterOtpScreen> {
               ),
             ),
           ),
-
-          // Content (OTP input fields and buttons)
           Positioned(
-            top: MediaQuery.of(context).size.height * 0.45, // <--- Adjust position to be on top of teal background
+            top: MediaQuery.of(context).size.height * 0.34,
             left: 0,
             right: 0,
             child: Padding(
@@ -182,7 +184,7 @@ class _EnterOtpScreenState extends State<EnterOtpScreen> {
                   ),
                   const SizedBox(height: 20),
                   Align(
-                    alignment: Alignment.centerLeft,
+                    alignment: Alignment.center,
                     child: TextButton(
                       onPressed: () {
                         print('Resending OTP to: ${widget.phoneNumber}');
@@ -201,9 +203,10 @@ class _EnterOtpScreenState extends State<EnterOtpScreen> {
                     width: double.infinity,
                     height: 55,
                     child: ElevatedButton(
-                      onPressed: _verifyOtp,
+                      onPressed: _isOtpValid ? _verifyOtp : null, // ✅ Disabled when incomplete
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.lightBlueAccent,
+                        backgroundColor: Colors.orange,
+                        disabledBackgroundColor: Colors.orange.shade200, // ✅ Light orange when disabled
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
@@ -211,7 +214,10 @@ class _EnterOtpScreenState extends State<EnterOtpScreen> {
                       ),
                       child: Text(
                         'Verify',
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 18, color: Colors.white),
+                        style: Theme.of(context)
+                            .textTheme
+                            .labelLarge
+                            ?.copyWith(fontSize: 18, color: Colors.white),
                       ),
                     ),
                   ),

@@ -17,32 +17,30 @@ class _GetOtpScreenState extends State<GetOtpScreen> {
   @override
   void initState() {
     super.initState();
-    // Initialize the video controller with otp.mp4 for GetOtpScreen
-    _videoController = VideoPlayerController.asset('assets/videos/Login_final.mp4') // <--- Using otp.mp4
+    // Initialize the video controller with Login_final.mp4 for GetOtpScreen
+    _videoController = VideoPlayerController.asset('assets/videos/Login_final.mp4')
       ..initialize().then((_) {
         _videoController.play();
         _videoController.setLooping(true);
         setState(() {});
       }).catchError((error) {
-        print("Error initializing video on GetOtpScreen: $error"); // Added screen name for clarity
+        print("Error initializing video on GetOtpScreen: $error");
       });
   }
 
   @override
   void dispose() {
     _whatsappNoController.dispose();
-    _videoController.dispose(); // <--- CRITICAL: Dispose the video controller
+    _videoController.dispose();
     super.dispose();
   }
 
   void _sendOtp() {
-    // Only proceed if the WhatsApp number is valid (10 digits)
     if (_isWhatsappNumberValid) {
       print('Sending OTP to: ${_whatsappNoController.text}');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('OTP sent! Navigating to OTP entry screen...')),
       );
-
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -61,12 +59,12 @@ class _GetOtpScreenState extends State<GetOtpScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // Main white background (for video) - Increased height
+          // Video background
           Positioned(
             top: 0,
             left: 0,
             right: 0,
-            height: MediaQuery.of(context).size.height * 0.6, // Increased to 60% of screen
+            height: MediaQuery.of(context).size.height * 0.6,
             child: Container(
               color: Colors.white,
               child: _videoController.value.isInitialized
@@ -81,13 +79,13 @@ class _GetOtpScreenState extends State<GetOtpScreen> {
                   ),
                 ),
               )
-                  : const SizedBox(), // Show nothing if video not initialized yet
+                  : const SizedBox(),
             ),
           ),
 
-          // Teal background section (moved to the bottom)
+          // Bottom teal section
           Positioned(
-            top: MediaQuery.of(context).size.height * 0.3, // Starts 30% from the top
+            top: MediaQuery.of(context).size.height * 0.3,
             left: 0,
             right: 0,
             bottom: 0,
@@ -100,18 +98,19 @@ class _GetOtpScreenState extends State<GetOtpScreen> {
                 ),
               ),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 40.0, vertical: 40.0), // Added vertical padding
+                padding: const EdgeInsets.symmetric(horizontal: 40.0, vertical: 40.0),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Whatsapp No. Input Field
+                    // WhatsApp Number Field
                     TextField(
                       controller: _whatsappNoController,
                       keyboardType: TextInputType.phone,
-                      maxLength: 10, // <--- Limit input to 10 characters
+                      maxLength: 10,
                       decoration: InputDecoration(
                         hintText: 'Whatsapp No.',
-                        counterText: "", // <--- Hides the default character counter
+                        hintStyle: const TextStyle(color: Colors.black),
+                        counterText: "",
                         prefixIcon: Padding(
                           padding: const EdgeInsets.all(8.0),
                           child: Image.asset(
@@ -120,7 +119,7 @@ class _GetOtpScreenState extends State<GetOtpScreen> {
                             height: 24,
                           ),
                         ),
-                        suffixIcon: _isWhatsappNumberValid // Show checkmark if valid
+                        suffixIcon: _isWhatsappNumberValid
                             ? const Icon(Icons.check_circle, color: Colors.green)
                             : null,
                         filled: true,
@@ -129,24 +128,25 @@ class _GetOtpScreenState extends State<GetOtpScreen> {
                           borderRadius: BorderRadius.circular(10.0),
                           borderSide: BorderSide.none,
                         ),
-                        contentPadding: const EdgeInsets.symmetric(vertical: 15.0, horizontal: 20.0),
+                        contentPadding:
+                        const EdgeInsets.symmetric(vertical: 15.0, horizontal: 20.0),
                       ),
                       onChanged: (value) {
                         setState(() {
-                          // Validate if the number is exactly 10 digits
                           _isWhatsappNumberValid = value.length == 10;
                         });
                       },
                     ),
                     const SizedBox(height: 20),
-                    // Get OTP Button
+                    // Get OTP Button (updated line here!)
                     SizedBox(
                       width: double.infinity,
                       height: 55,
                       child: ElevatedButton(
-                        onPressed: _sendOtp,
+                        onPressed: _isWhatsappNumberValid ? _sendOtp : null, // ✅ Button disabled until valid
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.orange,
+                          disabledBackgroundColor: Colors.orange.shade200,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
@@ -154,7 +154,10 @@ class _GetOtpScreenState extends State<GetOtpScreen> {
                         ),
                         child: Text(
                           'Get OTP',
-                          style: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 18, color: Colors.white),
+                          style: Theme.of(context)
+                              .textTheme
+                              .labelLarge
+                              ?.copyWith(fontSize: 18, color: Colors.white),
                         ),
                       ),
                     ),

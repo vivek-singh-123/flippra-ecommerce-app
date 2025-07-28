@@ -9,6 +9,9 @@ import 'package:flippra/screens/home_screen_category.dart'; // Import HomeScreen
 // Assuming you might navigate to SignUpScreen from here later
 // import 'package:flippra/screens/sign_up_screen.dart';
 
+bool _isMuted = false; // Default is speaker on
+
+
 class HindiHomeScreen extends StatefulWidget { // Class name changed
   const HindiHomeScreen({super.key}); // Constructor name changed
 
@@ -101,20 +104,28 @@ class _HindiHomeScreenState extends State<HindiHomeScreen> { // State class name
 
           // Speaker/Volume Icon - Repositioned just above the Next button
           Positioned(
-            bottom: MediaQuery.of(context).size.height * 0.2 + 70, // Adjust position above bottom nav and Next button
-            right: 30, // Adjusted right position to move it slightly left
+            bottom: MediaQuery.of(context).size.height * 0.2 + 70,
+            right: 30,
             child: GestureDetector(
               onTap: () {
-                // TODO: Implement volume/speaker functionality
-                print('Speaker icon tapped');
+                setState(() {
+                  _isMuted = !_isMuted;
+                  print(_isMuted ? 'Muted' : 'Unmuted');
+                });
               },
-              child: Image.asset( // Changed from Container to Image.asset directly
-                'assets/icons/volume.png', // Custom volume image
-                color: Colors.white, // Apply white color to the image
-                width: 40, // Adjust width as needed for visual size
-                height: 40, // Adjust height as needed for visual size
+              child: Image.asset(
+                _isMuted
+                    ? 'assets/icons/mute.png' // 👈 Add a mute icon in your assets folder
+                    : 'assets/icons/volume.png',
+                color: Colors.white,
+                width: 40,
+                height: 40,
                 errorBuilder: (context, error, stackTrace) {
-                  return const Icon(Icons.volume_up, size: 40, color: Colors.white); // Fallback to default icon
+                  return Icon(
+                    _isMuted ? Icons.volume_off : Icons.volume_up,
+                    size: 40,
+                    color: Colors.white,
+                  );
                 },
               ),
             ),

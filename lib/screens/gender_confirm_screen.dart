@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flippra/screens/sign_up_screen.dart'; // Import your SignUpScreen
+import 'package:video_player/video_player.dart'; // <--- Import video_player package
 
 class GenderConfirmScreen extends StatefulWidget {
   const GenderConfirmScreen({super.key});
@@ -9,9 +10,32 @@ class GenderConfirmScreen extends StatefulWidget {
 }
 
 class _GenderConfirmScreenState extends State<GenderConfirmScreen> {
+  late VideoPlayerController _videoController; // <--- Declare video controller
   String? _selectedGender; // To store the selected gender: 'Male' or 'Female'
 
   // Removed _confirmGender method as navigation will happen on tap
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize the video controller with Login_final.mp4 for GenderConfirmScreen
+    _videoController = VideoPlayerController.asset('assets/videos/Login_final.mp4') // <--- Use Login_final.mp4
+      ..initialize().then((_) {
+        // Ensure the first frame is shown and then play the video
+        _videoController.play();
+        _videoController.setLooping(true); // Loop the video continuously
+        setState(() {}); // Update the UI once the video is initialized
+      }).catchError((error) {
+        // Log any errors during video initialization
+        print("Error initializing video on GenderConfirmScreen: $error"); // Added screen name for clarity
+      });
+  }
+
+  @override
+  void dispose() {
+    _videoController.dispose(); // <--- CRITICAL: Dispose the video controller
+    super.dispose();
+  }
 
   // New method to handle gender selection and direct navigation
   void _onGenderSelected(String gender) {
@@ -32,12 +56,33 @@ class _GenderConfirmScreenState extends State<GenderConfirmScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // Main white background (implied by the phone frame)
-          Container(color: Colors.white),
+          // Video background section (replaces the main white background)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: MediaQuery.of(context).size.height * 0.8, // <--- Increased height for video
+            child: Container(
+              color: Colors.white, // Fallback color if video not ready
+              child: _videoController.value.isInitialized
+                  ? FittedBox(
+                fit: BoxFit.cover,
+                child: SizedBox(
+                  width: _videoController.value.size.width,
+                  height: _videoController.value.size.height,
+                  child: AspectRatio(
+                    aspectRatio: _videoController.value.aspectRatio,
+                    child: VideoPlayer(_videoController),
+                  ),
+                ),
+              )
+                  : const SizedBox(), // Show nothing if video not initialized yet
+            ),
+          ),
 
           // Teal background section
           Positioned(
-            top: MediaQuery.of(context).size.height * 0.4, // Adjust position as needed
+            top: MediaQuery.of(context).size.height * 0.4, // <--- Starts 40% from the top
             left: 0,
             right: 0,
             bottom: 0,
@@ -54,7 +99,7 @@ class _GenderConfirmScreenState extends State<GenderConfirmScreen> {
 
           // Content (Gender selection)
           Positioned(
-            top: MediaQuery.of(context).size.height * 0.25, // Adjust position to be on top of teal background
+            top: MediaQuery.of(context).size.height * 0.45, // <--- Adjust position to be on top of teal background
             left: 0,
             right: 0,
             child: Padding(
@@ -62,7 +107,11 @@ class _GenderConfirmScreenState extends State<GenderConfirmScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Gender Selection Cards
+                  Text(
+                    'Select Gender', // Added a title for clarity
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white),
+                  ),
+                  const SizedBox(height: 30), // Space below title
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
