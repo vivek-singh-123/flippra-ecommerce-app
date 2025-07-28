@@ -23,6 +23,7 @@ flutter:
   uses-material-design: true
 
   assets:
+    - assets/icons/
     - assets/
     - assets/videos/
     - assets/icons/whatsapp.png
@@ -39,9 +40,7 @@ flutter:
     - assets/icons/mute.png
     - assets/icons/banner_placeholder.png
     - assets/icons/doctor_placeholder.png
-    - assets/icons/settings_icon.png
     - assets/icons/person_icon.png
-    - assets/icons/gallery_icon.png
     - assets/icons/profile_placeholder.png
     - assets/icons/custom_bottom_nav_frame.png
     - assets/icons/map_placeholder.png
@@ -53,3 +52,10 @@ flutter:
     - assets/videos/Login_final.mp4
     - assets/videos/otp.mp4
     - assets/videos/world_map.mp4
+    - assets/icons/settings.png
+    - assets/icons/person.png
+    - assets/icons/shopping.png
+    - assets/icons/cart.png
+    - assets/icons/gallery.png
+    - assets/icons/top_frame.png
+    - assets/icons/english.png
