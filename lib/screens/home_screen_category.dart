@@ -159,111 +159,109 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
     );
   }
 
-  // NEW: Function to show settings dialog
   void _showSettingsDialog(BuildContext context) {
     print('Attempting to show settings dialog...');
 
-    final RenderBox? renderBox = _settingsIconKey.currentContext?.findRenderObject() as RenderBox?; //
-
+    final RenderBox? renderBox = _settingsIconKey.currentContext?.findRenderObject() as RenderBox?;
     if (renderBox == null) {
       print('ERROR: Settings icon RenderBox not found.');
-      return; // Cannot show dialog without render box
+      return;
     }
 
-    final Offset offset = renderBox.localToGlobal(Offset.zero); // Global position of the top-left corner of the icon
-    final Size size = renderBox.size; // Size of the icon
+    final Offset offset = renderBox.localToGlobal(Offset.zero);
+    final Size size = renderBox.size;
 
     final double screenWidth = MediaQuery.of(context).size.width;
     final double screenHeight = MediaQuery.of(context).size.height;
 
-    // Approximate dialog width and height for settings options
-    const double dialogContentWidth = 200.0;
-    const double singleOptionHeight = 50.0; // Height of each list tile item
-    const int numberOfOptions = 3; // Example: Language, Theme, About
+    const double dialogContentWidth = 90.0;
+    const double singleOptionHeight = 60.0;
+    const int numberOfOptions = 3;
     final double dialogContentHeight = singleOptionHeight * numberOfOptions;
 
-    // Position the dialog vertically above the settings icon
-    double dialogTop = offset.dy - dialogContentHeight - 8.0; // 8.0 is a small margin above the icon
-    // Ensure it doesn't go off the top of the screen
-    if (dialogTop < MediaQuery.of(context).padding.top + 8.0) {
-      dialogTop = offset.dy + size.height + 8.0; // If it overflows, place it below
+    double dialogTop = offset.dy - dialogContentHeight;
+    const double padding = 8.0;
+
+    if (dialogTop < MediaQuery.of(context).padding.top + padding) {
+      dialogTop = MediaQuery.of(context).padding.top + padding;
     }
 
-    // Position the dialog horizontally, centered with the settings icon
-    double dialogLeft = offset.dx + (size.width / 2) - (dialogContentWidth / 2); //
-    // Adjust if it goes off the left edge
-    if (dialogLeft < 8.0) {
-      dialogLeft = 8.0;
-    }
-    // Adjust if it goes off the right edge
-    if (dialogLeft + dialogContentWidth > screenWidth - 8.0) {
-      dialogLeft = screenWidth - dialogContentWidth - 8.0;
+    double dialogLeft = offset.dx + (size.width / 2) - (dialogContentWidth / 2);
+    if (dialogLeft < padding) {
+      dialogLeft = padding;
+    } else if (dialogLeft + dialogContentWidth > screenWidth - padding) {
+      dialogLeft = screenWidth - dialogContentWidth - padding;
     }
 
-    showGeneralDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
-      barrierColor: Colors.black.withOpacity(0.1),
-      transitionDuration: const Duration(milliseconds: 200),
-      pageBuilder: (BuildContext buildContext, Animation<double> animation, Animation<double> secondaryAnimation) {
-        return Align(
-          alignment: Alignment.topLeft,
-          child: Transform.translate(
-            offset: Offset(dialogLeft, dialogTop), // Use calculated position
-            child: Material(
-              color: Colors.white,
-              elevation: 4.0,
-              borderRadius: BorderRadius.circular(7.0),
-              child: SizedBox(
-                width: dialogContentWidth,
-                height: dialogContentHeight,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    ListTile(
-                      leading: const Icon(Icons.language, color: Colors.black),
-                      title: const Text('Language'),
-                      onTap: () {
-                        Navigator.pop(context); // Close settings dialog
-                        _showLanguageSelection(context); // Open language dialog
-                      },
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierDismissible: true,
+        pageBuilder: (context, animation, secondaryAnimation) {
+          return GestureDetector(
+            onTap: () => Navigator.of(context).pop(),
+            child: Scaffold(
+              backgroundColor: Colors.black.withOpacity(0.1),
+              body: Stack(
+                children: [
+                  Positioned(
+                    top: dialogTop,
+                    left: dialogLeft,
+                    child: ScaleTransition(
+                      scale: CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
+                      child: Material(
+                        color: Colors.white,
+                        elevation: 8.0,
+                        borderRadius: BorderRadius.circular(12.0),
+                        child: SizedBox(
+                          width: dialogContentWidth,
+                          height: dialogContentHeight,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              _buildDialogOption(context, 'assets/icons/settings.png', () {
+                                Navigator.pop(context);
+                              }),
+                              _buildDialogOption(context, 'assets/icons/settings.png', () {
+                                print('Theme tapped');
+                                Navigator.pop(context);
+                              }),
+                              _buildDialogOption(context, 'assets/icons/settings.png', () {
+                                print('About tapped');
+                                Navigator.pop(context);
+                              }),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
-                    ListTile(
-                      leading: const Icon(Icons.palette, color: Colors.black),
-                      title: const Text('Theme'),
-                      onTap: () {
-                        print('Theme option tapped');
-                        Navigator.pop(context); // Close dialog
-                        // TODO: Implement theme selection logic
-                      },
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.info, color: Colors.black),
-                      title: const Text('About'),
-                      onTap: () {
-                        print('About option tapped');
-                        Navigator.pop(context); // Close dialog
-                        // TODO: Implement about screen navigation
-                      },
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-          ),
-        );
-      },
-      transitionBuilder: (context, animation, secondaryAnimation, child) {
-        return FadeTransition(
-          opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
-          child: ScaleTransition(
-            scale: CurvedAnimation(parent: animation, curve: Curves.easeOut),
-            alignment: Alignment.bottomCenter, // Scale from bottom center to go upwards
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: animation,
             child: child,
-          ),
-        );
-      },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildDialogOption(BuildContext context, String iconPath, VoidCallback onTap) {
+    return ListTile(
+      leading: Image.asset(
+        iconPath,
+        width: 40,
+        height: 40,
+        errorBuilder: (context, error, stackTrace) =>
+        const Icon(Icons.error, size: 40, color: Colors.red),
+      ),
+      onTap: onTap,
     );
   }
 
@@ -285,7 +283,7 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
             children: [
               // Top Bar (Location, WhatsApp) - Now with custom drawn background
               Container(
-                height: 85.0,
+                height: 105.0,
                 decoration: const BoxDecoration(
                   // We'll use a LinearGradient to simulate the top_frame.png
                   gradient: LinearGradient(
@@ -380,7 +378,7 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
                       children: [
                         Image.asset(
                           'assets/icons/toggle.png',
-                          width: 80,
+                          width: 75,
                           height: 60,
                           fit: BoxFit.contain,
                           errorBuilder: (context, error, stackTrace) {
@@ -766,21 +764,9 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
     required int index,
     required VoidCallback onTap,
   }) {
-    // Determine the border color based on whether this icon is selected.
-    // If it's the 'Settings' icon (index 0) AND it's currently selected,
-    // the border should be green. Otherwise, it should be the default teal.
     final Color borderColor = (_selectedIndex == index && index == 0)
         ? Colors.green // Green border for selected Settings icon
         : const Color(0xFF00B3A7); // Original teal for others or unselected Settings
-
-    // The inner circular background should remain white/transparent as per image_d57418.png.
-    // Your original code doesn't set a 'color' property for the Container, which makes it transparent
-    // against the parent's grey background. This is the correct behavior based on your image.
-
-    // The icon itself (wrench and screwdriver) should remain black.
-    // Your original code doesn't set a 'color' property for Image.asset, meaning it uses
-    // the image's original colors. If your 'settings.png' is already black, this is fine.
-    // If it's not black, you might need to add `color: Colors.black` here, but you said no other changes.
 
     return GestureDetector(
       key: key, // Assign the key here

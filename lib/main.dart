@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flippra/screens/get_otp_screen.dart';
 import 'package:flippra/screens/gender_confirm_screen.dart';
 import 'package:flippra/screens/sign_up_screen.dart';
-import 'package:flippra/screens/hindi_home_screen.dart'; // Updated import to HindiHomeScreen
+import 'package:flippra/screens/home_screen.dart'; // Updated import to HindiHomeScreen
 import 'package:flippra/screens/shop_screen.dart';
 import 'package:flippra/screens/shop2_screen.dart'; // New: Import shop2_screen.dart
 
@@ -101,7 +101,7 @@ class MyApp extends StatelessWidget {
         '/get_otp': (context) => GetOtpScreen(), // Removed const
         '/gender_confirm': (context) => GenderConfirmScreen(), // Removed const
         '/sign_up': (context) => SignUpScreen(), // Removed const
-        '/home': (context) => HindiHomeScreen(), // Updated route to HindiHomeScreen
+        '/home': (context) => HomeScreen(), // Updated route to HindiHomeScreen
         '/shop_screen': (context) => const ShopScreen(),
         '/shop2_screen': (context) => const Shop2Screen(), // New: Added route for Shop2Screen
       },

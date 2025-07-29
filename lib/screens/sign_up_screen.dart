@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flippra/screens/Hindi_home_screen.dart'; // Import your HomeScreen
+import 'package:flippra/screens/home_screen.dart'; // Import your HomeScreen
 import 'package:video_player/video_player.dart'; // <--- Import video_player package
 
 class SignUpScreen extends StatefulWidget {
@@ -70,7 +70,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     // Navigate to the HomeScreen after successful sign-up
     Navigator.pushReplacement( // Using pushReplacement to prevent going back to SignUpScreen
       context,
-      MaterialPageRoute(builder: (context) => const HindiHomeScreen()), // HomeScreen can be const if it doesn't have mutable state directly in its constructor
+      MaterialPageRoute(builder: (context) => const HomeScreen()), // HomeScreen can be const if it doesn't have mutable state directly in its constructor
     );
   }
 
