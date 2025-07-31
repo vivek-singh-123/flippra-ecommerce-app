@@ -426,7 +426,7 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
                           child: Image.asset(
                             'assets/icons/whatsapp.png', // WhatsApp icon path
                             width: 30, // Adjust size as needed
-                            height: 30, // Adjust size as needed
+                            height: 65, // Adjust size as needed
                             errorBuilder: (context, error, stackTrace) {
                               return const Icon(Icons.error, color: Colors.red, size: 30);
                             },
