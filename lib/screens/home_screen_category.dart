@@ -38,9 +38,6 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
     // Test if location services are enabled.
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      // Location services are not enabled don't continue
-      // accessing the position and request users of the
-      // App to enable the location services.
       setState(() => _currentAddress = "Location services are disabled.");
       return;
     }
@@ -394,12 +391,6 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.start, // Align content to the start of the cross axis
                       children: [
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.pop(context); // Go back
-                          },
-                          child: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
-                        ),
                         Expanded(
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 8.0),
