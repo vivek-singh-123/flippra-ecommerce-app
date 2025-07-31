@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flippra/screens/shop_screen.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 
 class HomeScreenCategoryScreen extends StatefulWidget {
   const HomeScreenCategoryScreen({super.key});
@@ -9,15 +11,98 @@ class HomeScreenCategoryScreen extends StatefulWidget {
 }
 
 class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
+  // Geolocation variables
+  String _currentAddress = "Fetching location...";
+  Position? _currentPosition;
+
+  // UI and state variables
   int _selectedIndex = 0; // For the bottom navigation bar
   String _selectedLanguage = 'English'; // To keep track of the selected language
   bool _isToggleRight = true; // Added for the video icon toggle position
 
-  // GlobalKey for the language toggle icon to get its position
+  // GlobalKeys for UI elements
   final GlobalKey _languageIconKey = GlobalKey();
-  // NEW: GlobalKey for the Settings icon
-  final GlobalKey _settingsIconKey = GlobalKey(); //
+  final GlobalKey _settingsIconKey = GlobalKey();
 
+  @override
+  void initState() {
+    super.initState();
+    _getCurrentLocation(); // Start fetching location on init
+  }
+
+  // --- Geolocation Methods ---
+  Future<void> _getCurrentLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    // Test if location services are enabled.
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      // Location services are not enabled don't continue
+      // accessing the position and request users of the
+      // App to enable the location services.
+      setState(() => _currentAddress = "Location services are disabled.");
+      return;
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        setState(() => _currentAddress = "Location permission denied.");
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      // Permissions are denied forever, handle appropriately.
+      setState(() => _currentAddress = "Location permission permanently denied.");
+      return;
+    }
+
+    // When we reach here, permissions are granted and we can
+    // continue accessing the position of the device.
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high, // Request high accuracy
+      );
+      setState(() {
+        _currentPosition = position;
+      });
+      _getAddressFromLatLng();
+    } catch (e) {
+      setState(() => _currentAddress = "Failed to get location: $e");
+      print("Error getting current position: $e");
+    }
+  }
+
+  Future<void> _getAddressFromLatLng() async {
+    try {
+      if (_currentPosition != null) {
+        List<Placemark> placemarks = await placemarkFromCoordinates(
+          _currentPosition!.latitude,
+          _currentPosition!.longitude,
+        );
+        Placemark place = placemarks[0];
+        setState(() {
+          // Construct a more detailed address string
+          _currentAddress =
+          "${place.name ?? ''}, ${place.thoroughfare ?? ''}, ${place.subLocality ?? ''}, ${place.locality ?? ''}, ${place.administrativeArea ?? ''}, ${place.postalCode ?? ''}, ${place.country ?? ''}";
+          // Clean up multiple commas if some parts are null
+          _currentAddress = _currentAddress.replaceAll(RegExp(r', , '), ', ').replaceAll(RegExp(r'^, '), '');
+        });
+      } else {
+        setState(() => _currentAddress = "Location data not available.");
+      }
+    } catch (e) {
+      setState(() => _currentAddress = "Failed to get address: $e");
+      print("Error getting address from coordinates: $e");
+    }
+  }
+  // --- End Geolocation Methods ---
+
+
+  // --- UI Interaction Methods ---
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -25,7 +110,7 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
     print('Selected bottom nav item: $index');
 
     if (index == 0) { // If Settings icon is tapped
-      _showSettingsDialog(context); // Call the new settings dialog
+      _showSettingsDialog(context); // Call the settings dialog
     }
   }
 
@@ -322,24 +407,20 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               // Ensure text content is aligned nicely within the available height
                               mainAxisAlignment: MainAxisAlignment.center,
-                              children: const [
+                              children: [
                                 Row(
                                   children: [
-                                    SizedBox(width: 4),
-                                    Text(
-                                      'Delhi - 6',
-                                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                                    const SizedBox(width: 4),
+                                    const Icon(Icons.location_on, color: Colors.white, size: 20),
+                                    Expanded(
+                                      child: Text(
+                                        _currentAddress, // Display fetched address here
+                                        style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
-                                    Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 20),
                                   ],
-                                ),
-                                Text(
-                                  'Near Azad Market, Pahadi Dheeraj',
-                                  style: TextStyle(color: Colors.white70, fontSize: 12),
-                                ),
-                                Text(
-                                  'Near Axis Bank',
-                                  style: TextStyle(color: Colors.white70, fontSize: 12),
                                 ),
                               ],
                             ),
@@ -491,7 +572,6 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
                   ],
                 ),
               ),
-
               // Banner Image
               Container(
                 width: double.infinity,

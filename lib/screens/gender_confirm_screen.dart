@@ -1,5 +1,8 @@
+import 'package:flippra/backend/update/update.dart';
 import 'package:flutter/material.dart';
 import 'package:flippra/screens/sign_up_screen.dart'; // Import your SignUpScreen
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
 import 'package:video_player/video_player.dart'; // <--- Import video_player package
 
 class GenderConfirmScreen extends StatefulWidget {
@@ -37,18 +40,38 @@ class _GenderConfirmScreenState extends State<GenderConfirmScreen> {
     super.dispose();
   }
 
+  Future<void> _updateuser(BuildContext context, String gender) async {
+    final UpdateUser controller = Get.put(UpdateUser());
+
+    try {
+      await controller.updateuser(
+        token: "wvnwivnoweifnqinqfinefnq",
+        firstname:"",
+        lastname: "",
+        Gender: gender,
+        Email:"",
+        City: "",
+        phone: "7700818003",
+      );
+      print("Successfully Register");
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => SignUpScreen()),
+      );
+      controller.isLoading.value = false;
+    } catch (e) {
+      print('❌ Registeration Failed: $e');
+    } finally {
+      controller.isLoading.value = false;
+    }
+  }
+
   // New method to handle gender selection and direct navigation
   void _onGenderSelected(String gender) {
     setState(() {
       _selectedGender = gender;
     });
-    print('Selected Gender: $gender. Navigating to Sign Up Screen...');
-    // Navigate to the SignUpScreen immediately after gender is selected
-    // Using pushReplacement to prevent going back to GenderConfirmScreen from SignUpScreen
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => SignUpScreen()),
-    );
+    _updateuser(context, gender);
   }
 
   @override

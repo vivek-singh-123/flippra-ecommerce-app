@@ -12,7 +12,12 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
-  video_player: ^2.8.1 # <-- THIS IS THE CRUCIAL LINE, ENSURE THIS INDENTATION
+  video_player: ^2.8.1
+  http: ^1.2.1
+  get: ^4.7.2
+  geolocator: ^11.0.0
+  geocoding: ^3.0.0
+  permission_handler: ^11.3.0
 
 dev_dependencies:
   flutter_test:

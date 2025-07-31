@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flippra/screens/enter_otp_screen.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
 import 'package:video_player/video_player.dart';
+
+import '../backend/register/register.dart';
 
 class GetOtpScreen extends StatefulWidget {
   const GetOtpScreen({super.key});
@@ -35,22 +39,50 @@ class _GetOtpScreenState extends State<GetOtpScreen> {
     super.dispose();
   }
 
-  void _sendOtp() {
-    if (_isWhatsappNumberValid) {
-      print('Sending OTP to: ${_whatsappNoController.text}');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('OTP sent! Navigating to OTP entry screen...')),
+  // void _sendOtp() {
+  //   if (_isWhatsappNumberValid) {
+  //     print('Sending OTP to: ${_whatsappNoController.text}');
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(content: Text('OTP sent! Navigating to OTP entry screen...')),
+  //     );
+  //     Navigator.push(
+  //       context,
+  //       MaterialPageRoute(
+  //         builder: (context) => EnterOtpScreen(phoneNumber: _whatsappNoController.text),
+  //       ),
+  //     );
+  //   } else {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(content: Text('Please enter a valid 10-digit WhatsApp number.')),
+  //     );
+  //   }
+  // }
+
+  Future<void> _register(BuildContext context, String number) async {
+    final Register controller = Get.put(Register());
+
+    try {
+      await controller.Regiter(
+        token: "wvnwivnoweifnqinqfinefnq",
+          firstname:"",
+          lastname: "",
+          Gender:"",
+          Email:"",
+          City: "",
+          phone: number,
       );
+      print("Successfully Register");
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => EnterOtpScreen(phoneNumber: _whatsappNoController.text),
         ),
       );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid 10-digit WhatsApp number.')),
-      );
+      controller.isLoading.value = false;
+    } catch (e) {
+      print('❌ Registeration Failed: $e');
+    } finally {
+      controller.isLoading.value = false;
     }
   }
 
@@ -143,9 +175,11 @@ class _GetOtpScreenState extends State<GetOtpScreen> {
                       width: double.infinity,
                       height: 55,
                       child: ElevatedButton(
-                        onPressed: _isWhatsappNumberValid ? _sendOtp : null, // ✅ Button disabled until valid
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange,
+                        onPressed: _isWhatsappNumberValid // Only enable if number is valid
+                            ? () => _register(context, _whatsappNoController.text) // Pass the text from the controller
+                            : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange,
                           disabledBackgroundColor: Colors.orange.shade200,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),

@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flippra/screens/home_screen.dart'; // Import your HomeScreen
-import 'package:video_player/video_player.dart'; // <--- Import video_player package
+import 'package:get/get.dart';
+import 'package:video_player/video_player.dart';
+
+import '../backend/update/update.dart'; // <--- Import your UpdateUser controller
 
 class SignUpScreen extends StatefulWidget {
-  const SignUpScreen({super.key});
+  final String? gender;
+  const SignUpScreen({super.key, this.gender});
 
   @override
   State<SignUpScreen> createState() => _SignUpScreenState();
 }
 
 class _SignUpScreenState extends State<SignUpScreen> {
-  late VideoPlayerController _videoController; // <--- Declare video controller
+  late VideoPlayerController _videoController;
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
@@ -19,19 +23,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
   // List of cities for the dropdown, you can expand this
   final List<String> _cities = ['Delhi', 'Mumbai', 'Bangalore', 'Chennai', 'Kolkata'];
 
+  // GetX controller instance
+  // Using Get.put() here to ensure the controller is initialized and available
+  final UpdateUser _userController = Get.put(UpdateUser());
+
   @override
   void initState() {
     super.initState();
-    // Initialize the video controller with world_map.mp4
-    _videoController = VideoPlayerController.asset('assets/videos/Login_final.mp4') // Corrected to world_map.mp4
+    // Initialize the video controller
+    _videoController = VideoPlayerController.asset('assets/videos/Login_final.mp4')
       ..initialize().then((_) {
-        // Ensure the first frame is shown and then play the video
         _videoController.play();
-        _videoController.setLooping(true); // Loop the video continuously
-        setState(() {}); // Update the UI once the video is initialized
+        _videoController.setLooping(true);
+        setState(() {});
       }).catchError((error) {
-        // Log any errors during video initialization
-        print("Error initializing video on SignUpScreen: $error"); // Added screen name for clarity
+        print("Error initializing video on SignUpScreen: $error");
       });
   }
 
@@ -40,39 +46,58 @@ class _SignUpScreenState extends State<SignUpScreen> {
     _firstNameController.dispose();
     _lastNameController.dispose();
     _emailController.dispose();
-    _videoController.dispose(); // <--- CRITICAL: Dispose the video controller
+    _videoController.dispose();
     super.dispose();
   }
 
-  void _signUp() {
+  void _signUp() async {
+    // Made _signUp async
     // Basic validation
     if (_firstNameController.text.isEmpty ||
         _lastNameController.text.isEmpty ||
         _emailController.text.isEmpty ||
-        _selectedCity == null) {
+        _selectedCity == null
+    ) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all fields and select a city.')),
+        const SnackBar(content: Text(
+            'Please fill all fields and select a city/phone number.')),
       );
       return;
     }
-
-    // You can add more complex validation here (e.g., email format)
 
     print('First Name: ${_firstNameController.text}');
     print('Last Name: ${_lastNameController.text}');
     print('Email ID: ${_emailController.text}');
     print('City: $_selectedCity');
 
+    // Show a loading indicator
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Sign Up Successful!')),
+      const SnackBar(content: Text('Registering...')),
     );
 
+    // Call the registerUser method from the controller
+    await _userController.updateuser(
+      token: "wvnwivnoweifnqinqfinefnq",
+      // Replace with your actual token
+      firstname: _firstNameController.text,
+      lastname: _lastNameController.text,
+      Gender: "",
+      Email: _emailController.text,
+      City: _selectedCity!,
+      // Non-nullable after validation
+      phone: "7700818003", // Pass the phone number from the controller
+    );
+
+    // Hide loading indicator
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     // Navigate to the HomeScreen after successful sign-up
-    Navigator.pushReplacement( // Using pushReplacement to prevent going back to SignUpScreen
+    Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => const HomeScreen()), // HomeScreen can be const if it doesn't have mutable state directly in its constructor
+      MaterialPageRoute(builder: (context) => const HomeScreen()),
     );
   }
+
+  // _updateuser function has been removed and its logic integrated into _signUp
 
   @override
   Widget build(BuildContext context) {
@@ -206,7 +231,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         value: _selectedCity,
                         hint: const Text('Select City'),
                         icon: const Icon(Icons.arrow_drop_down, color: Colors.teal),
-                        style: const TextStyle(color: Colors.black, fontSize: 16), // Dropdown text color
+                        style: const TextStyle(color: Colors.black, fontSize: 16),
                         onChanged: (String? newValue) {
                           setState(() {
                             _selectedCity = newValue;
@@ -233,10 +258,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           _emailController.text.isNotEmpty &&
                           _selectedCity != null)
                           ? _signUp
-                          : null, // Disable if any field is empty
+                          : null, // Disable if any field is empty or phone is invalid
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.orange,
-                        disabledBackgroundColor: Colors.orange.shade200, // 👈 Light orange when disabled
+                        disabledBackgroundColor: Colors.orange.shade200,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
@@ -266,6 +291,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     required String labelText,
     required String hintText,
     TextInputType keyboardType = TextInputType.text,
+    int? maxLength, // Added maxLength parameter
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -294,12 +320,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
           child: TextField(
             controller: controller,
             keyboardType: keyboardType,
-            style: const TextStyle(color: Colors.black), // <--- This sets the entered text color to black
+            maxLength: maxLength, // Apply maxLength
+            style: const TextStyle(color: Colors.black),
             decoration: InputDecoration(
               hintText: hintText,
-              hintStyle: TextStyle(color: Colors.grey[600]), // <--- Recommended: Make hint text a slightly lighter black/dark grey
-              border: InputBorder.none, // Remove default border
+              hintStyle: TextStyle(color: Colors.grey[600]),
+              border: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
+              counterText: "", // Hide the default maxLength counter
             ),
           ),
         ),
