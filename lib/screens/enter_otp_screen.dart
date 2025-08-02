@@ -24,6 +24,9 @@ class _EnterOtpScreenState extends State<EnterOtpScreen> {
   final FocusNode _focusNode3 = FocusNode();
   final FocusNode _focusNode4 = FocusNode();
 
+  // State variable to control the floating animation
+  bool _isKeyboardVisible = false;
+
   bool get _isOtpValid =>
       _otpDigit1Controller.text.length == 1 &&
           _otpDigit2Controller.text.length == 1 &&
@@ -47,6 +50,13 @@ class _EnterOtpScreenState extends State<EnterOtpScreen> {
     _otpDigit2Controller.addListener(_onOtpChanged);
     _otpDigit3Controller.addListener(_onOtpChanged);
     _otpDigit4Controller.addListener(_onOtpChanged);
+
+    // Listen to focus changes on the first OTP field to trigger the animation
+    _focusNode1.addListener(() {
+      setState(() {
+        _isKeyboardVisible = _focusNode1.hasFocus;
+      });
+    });
   }
 
   void _onOtpChanged() {
@@ -118,14 +128,25 @@ class _EnterOtpScreenState extends State<EnterOtpScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+
+    // Adjusted the top position calculation
+    final containerHeight = 250.0; // Approximate height of the teal container
+    final animatedTop = keyboardHeight > 0
+        ? screenHeight - keyboardHeight - containerHeight
+        : screenHeight * 0.55;
+
     return Scaffold(
+      // Prevents the screen from resizing when the keyboard appears
+      resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
           Positioned(
             top: 100,
             left: 0,
             right: 0,
-            height: MediaQuery.of(context).size.height * 0.64,
+            height: screenHeight * 0.64,
             child: Container(
               color: Colors.white,
               child: _videoController.value.isInitialized
@@ -143,11 +164,15 @@ class _EnterOtpScreenState extends State<EnterOtpScreen> {
                   : const SizedBox(),
             ),
           ),
-          Positioned(
-            top: MediaQuery.of(context).size.height * 0.31,
+          // Animated bottom teal section
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+            // Adjust top based on whether the keyboard is visible
+            top: animatedTop,
             left: 0,
             right: 0,
-            bottom: 0,
+            bottom: _isKeyboardVisible ? 0 : -20,
             child: Container(
               decoration: const BoxDecoration(
                 color: Colors.teal,
@@ -156,72 +181,65 @@ class _EnterOtpScreenState extends State<EnterOtpScreen> {
                   topRight: Radius.circular(50.0),
                 ),
               ),
-            ),
-          ),
-          Positioned(
-            top: MediaQuery.of(context).size.height * 0.34,
-            left: 0,
-            right: 0,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Text(
-                    'Enter OTP',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white),
-                  ),
-                  const SizedBox(height: 30),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _otpDigitField(_otpDigit1Controller, _focusNode1, _focusNode2),
-                      _otpDigitField(_otpDigit2Controller, _focusNode2, _focusNode3),
-                      _otpDigitField(_otpDigit3Controller, _focusNode3, _focusNode4),
-                      _otpDigitField(_otpDigit4Controller, _focusNode4, null),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  Align(
-                    alignment: Alignment.center,
-                    child: TextButton(
-                      onPressed: () {
-                        print('Resending OTP to: ${widget.phoneNumber}');
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Resending OTP...')),
-                        );
-                      },
-                      child: Text(
-                        'Resend OTP',
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.white),
-                      ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 40.0, vertical: 15.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Enter OTP',
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white),
                     ),
-                  ),
-                  const SizedBox(height: 30),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 55,
-                    child: ElevatedButton(
-                      onPressed: _isOtpValid ? _verifyOtp : null, // ✅ Disabled when incomplete
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        disabledBackgroundColor: Colors.orange.shade200, // ✅ Light orange when disabled
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                    const SizedBox(height: 30),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _otpDigitField(_otpDigit1Controller, _focusNode1, _focusNode2),
+                        _otpDigitField(_otpDigit2Controller, _focusNode2, _focusNode3),
+                        _otpDigitField(_otpDigit3Controller, _focusNode3, _focusNode4),
+                        _otpDigitField(_otpDigit4Controller, _focusNode4, null),
+                      ],
+                    ),
+                    Align(
+                      alignment: Alignment.center,
+                      child: TextButton(
+                        onPressed: () {
+                          print('Resending OTP to: ${widget.phoneNumber}');
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Resending OTP...')),
+                          );
+                        },
+                        child: Text(
+                          'Resend OTP',
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.white),
                         ),
-                        elevation: 3,
-                      ),
-                      child: Text(
-                        'Verify',
-                        style: Theme.of(context)
-                            .textTheme
-                            .labelLarge
-                            ?.copyWith(fontSize: 18, color: Colors.white),
                       ),
                     ),
-                  ),
-                ],
+                    SizedBox(
+                      width: double.infinity,
+                      height: 55,
+                      child: ElevatedButton(
+                        onPressed: _isOtpValid ? _verifyOtp : null, // ✅ Disabled when incomplete
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          disabledBackgroundColor: Colors.orange.shade200, // ✅ Light orange when disabled
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          elevation: 3,
+                        ),
+                        child: Text(
+                          'Verify',
+                          style: Theme.of(context)
+                              .textTheme
+                              .labelLarge
+                              ?.copyWith(fontSize: 18, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

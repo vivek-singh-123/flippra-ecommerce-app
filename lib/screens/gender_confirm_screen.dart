@@ -16,7 +16,10 @@ class _GenderConfirmScreenState extends State<GenderConfirmScreen> {
   late VideoPlayerController _videoController; // <--- Declare video controller
   String? _selectedGender; // To store the selected gender: 'Male' or 'Female'
 
-  // Removed _confirmGender method as navigation will happen on tap
+  // Focus node to detect when any gender card is selected
+  final FocusNode _genderFocusNode = FocusNode();
+  // State variable to control the floating animation
+  bool _isFloating = false;
 
   @override
   void initState() {
@@ -32,11 +35,19 @@ class _GenderConfirmScreenState extends State<GenderConfirmScreen> {
         // Log any errors during video initialization
         print("Error initializing video on GenderConfirmScreen: $error"); // Added screen name for clarity
       });
+
+    // Add a listener to the focus node to trigger the floating animation
+    _genderFocusNode.addListener(() {
+      setState(() {
+        _isFloating = _genderFocusNode.hasFocus;
+      });
+    });
   }
 
   @override
   void dispose() {
     _videoController.dispose(); // <--- CRITICAL: Dispose the video controller
+    _genderFocusNode.dispose();
     super.dispose();
   }
 
@@ -53,14 +64,14 @@ class _GenderConfirmScreenState extends State<GenderConfirmScreen> {
         City: "",
         phone: "7700818003",
       );
-      print("Successfully Register");
+      print("Successfully Registered Gender");
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => SignUpScreen()),
       );
       controller.isLoading.value = false;
     } catch (e) {
-      print('❌ Registeration Failed: $e');
+      print('❌ Gender registration failed: $e');
     } finally {
       controller.isLoading.value = false;
     }
@@ -71,22 +82,26 @@ class _GenderConfirmScreenState extends State<GenderConfirmScreen> {
     setState(() {
       _selectedGender = gender;
     });
+    // This part will not actually animate as it navigates immediately,
+    // but the state and logic are in place for more complex scenarios.
     _updateuser(context, gender);
   }
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+
     return Scaffold(
       body: Stack(
         children: [
-          // Video background section (replaces the main white background)
+          // Video background section
           Positioned(
             top: 0,
             left: 0,
             right: 0,
-            height: MediaQuery.of(context).size.height * 0.8, // <--- Increased height for video
+            height: screenHeight * 0.8,
             child: Container(
-              color: Colors.white, // Fallback color if video not ready
+              color: Colors.white,
               child: _videoController.value.isInitialized
                   ? FittedBox(
                 fit: BoxFit.cover,
@@ -99,30 +114,35 @@ class _GenderConfirmScreenState extends State<GenderConfirmScreen> {
                   ),
                 ),
               )
-                  : const SizedBox(), // Show nothing if video not initialized yet
+                  : const SizedBox(),
             ),
           ),
 
-          // Teal background section
-          Positioned(
-            top: MediaQuery.of(context).size.height * 0.4, // <--- Starts 40% from the top
+          // Animated bottom teal section
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+            // The top value will be constant since there's no keyboard to push it up
+            top: _isFloating ? screenHeight * 0.3 : screenHeight * 0.55,
             left: 0,
             right: 0,
             bottom: 0,
             child: Container(
               decoration: const BoxDecoration(
-                color: Colors.teal, // Teal color as per screenshot
+                color: Colors.teal,
                 borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(50.0), // Rounded top-left corner
-                  topRight: Radius.circular(50.0), // Rounded top-right corner
+                  topLeft: Radius.circular(50.0),
+                  topRight: Radius.circular(50.0),
                 ),
               ),
             ),
           ),
 
-          // Content (Gender selection)
-          Positioned(
-            top: MediaQuery.of(context).size.height * 0.45, // <--- Adjust position to be on top of teal background
+          // Content (Gender selection) with an animated position
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+            top: _isFloating ? screenHeight * 0.45 : screenHeight * 0.6,
             left: 0,
             right: 0,
             child: Padding(
@@ -131,28 +151,27 @@ class _GenderConfirmScreenState extends State<GenderConfirmScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Select Gender', // Added a title for clarity
+                    'Select Gender',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white),
                   ),
-                  const SizedBox(height: 30), // Space below title
+                  const SizedBox(height: 30),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       _genderSelectionCard(
                         context,
                         'Male',
-                        'assets/icons/man.png', // Custom icon for male
+                        'assets/icons/man.png',
                         _selectedGender == 'Male',
                       ),
                       _genderSelectionCard(
                         context,
                         'Female',
-                        'assets/icons/woman.png', // Custom icon for female
+                        'assets/icons/woman.png',
                         _selectedGender == 'Female',
                       ),
                     ],
                   ),
-                  // The Confirm Button is removed from here
                 ],
               ),
             ),
@@ -166,22 +185,25 @@ class _GenderConfirmScreenState extends State<GenderConfirmScreen> {
   Widget _genderSelectionCard(
       BuildContext context,
       String gender,
-      String imagePath, // Changed from IconData to String for image path
+      String imagePath,
       bool isSelected,
       ) {
     return GestureDetector(
-      // Changed onTap to call the new _onGenderSelected method
-      onTap: () => _onGenderSelected(gender),
+      onTap: () {
+        // When a gender is tapped, set the focus to trigger the animation
+        FocusScope.of(context).requestFocus(_genderFocusNode);
+        _onGenderSelected(gender);
+      },
       child: Column(
         children: [
           Container(
-            width: 120, // Size of the circular avatar
+            width: 120,
             height: 120,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isSelected ? Colors.white.withOpacity(0.9) : Colors.white.withOpacity(0.6), // Background color
+              color: isSelected ? Colors.white.withOpacity(0.9) : Colors.white.withOpacity(0.6),
               border: Border.all(
-                color: isSelected ? Colors.blueAccent : Colors.transparent, // Highlight border if selected
+                color: isSelected ? Colors.blueAccent : Colors.transparent,
                 width: 3,
               ),
               boxShadow: [
@@ -194,9 +216,9 @@ class _GenderConfirmScreenState extends State<GenderConfirmScreen> {
               ],
             ),
             child: Center(
-              child: Image.asset( // Changed from Icon to Image.asset
+              child: Image.asset(
                 imagePath,
-                fit: BoxFit.contain, // Ensures the image scales within the bounds without cropping
+                fit: BoxFit.contain,
               ),
             ),
           ),
@@ -204,7 +226,7 @@ class _GenderConfirmScreenState extends State<GenderConfirmScreen> {
           Text(
             gender,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.white, // Text color for gender
+              color: Colors.white,
               fontWeight: FontWeight.bold,
             ),
           ),

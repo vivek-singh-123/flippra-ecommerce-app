@@ -7,6 +7,7 @@ import 'package:flippra/screens/sign_up_screen.dart';
 import 'package:flippra/screens/home_screen.dart'; // Updated import to HindiHomeScreen
 import 'package:flippra/screens/shop_screen.dart';
 import 'package:flippra/screens/shop2_screen.dart'; // New: Import shop2_screen.dart
+import 'package:flippra/screens/splash_screen.dart'; // Import the new SplashScreen
 
 void main() {
   runApp(const MyApp());
@@ -96,8 +97,9 @@ class MyApp extends StatelessWidget {
         ),
       ),
       // Define named routes for all your screens
-      initialRoute: '/get_otp', // Set the initial route for the app
+      initialRoute: '/splash', // Set the initial route to the splash screen
       routes: {
+        '/splash': (context) => const SplashScreen(),
         '/get_otp': (context) => GetOtpScreen(), // Removed const
         '/gender_confirm': (context) => GenderConfirmScreen(), // Removed const
         '/sign_up': (context) => SignUpScreen(), // Removed const

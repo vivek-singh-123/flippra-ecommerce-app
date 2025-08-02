@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flippra/screens/home_screen_category.dart';
-
+import 'package:video_player/video_player.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -11,133 +11,121 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String _selectedLanguage = 'Hindi'; // State to manage selected language, default Hindi
-  bool _isMuted = false; // Moved _isMuted into the state class
+  late VideoPlayerController _videoController;
+  bool _isMuted = false;
+  bool _isVideoPlaying = true; // State to toggle video playing
+  bool _isToggleRight = false; // State to track the position of the toggle switch
 
+  // Main background image
   final String _mainBackgroundImage = 'assets/icons/home_bg.jpg';
+  // Video path
+  final String _homeVideoPath = 'assets/videos/home_screen_video.mp4';
+
+
+  @override
+  void initState() {
+    super.initState();
+    // Initially set the toggle position based on the default language
+    _isToggleRight = _selectedLanguage == 'English';
+
+    _videoController = VideoPlayerController.asset(_homeVideoPath)
+      ..initialize().then((_) {
+        _videoController.play();
+        _videoController.setLooping(true);
+        setState(() {});
+      }).catchError((error) {
+        print("Error initializing video on HomeScreen: $error");
+      });
+  }
+
+  @override
+  void dispose() {
+    _videoController.dispose();
+    super.dispose();
+  }
+
+  void _toggleLanguage(String language) {
+    setState(() {
+      _selectedLanguage = language;
+      _isToggleRight = language == 'English';
+      _isMuted = false; // Unmute when language is toggled
+      if (_isVideoPlaying) {
+        _videoController.play();
+      }
+    });
+  }
+
+  void _toggleVideoPlayback() {
+    setState(() {
+      _isVideoPlaying = !_isVideoPlaying;
+      if (_isVideoPlaying) {
+        _videoController.play();
+      } else {
+        _videoController.pause();
+      }
+    });
+  }
+
+  void _onVideoToggleTapped() {
+    setState(() {
+      _isToggleRight = !_isToggleRight;
+      _selectedLanguage = _isToggleRight ? 'English' : 'Hindi';
+      _toggleVideoPlayback();
+    });
+  }
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
-          // Main Background Image (using home_bg.jpg)
-          Container(
-            width: double.infinity,
-            height: double.infinity,
-            decoration: BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage(_mainBackgroundImage),
-                fit: BoxFit.cover,
+          // Background - either video or static image
+          _isVideoPlaying && _videoController.value.isInitialized
+              ? Positioned.fill(
+            child: FittedBox(
+              fit: BoxFit.cover,
+              child: SizedBox(
+                width: _videoController.value.size.width,
+                height: _videoController.value.size.height,
+                child: VideoPlayer(_videoController),
               ),
+            ),
+          )
+              : Positioned.fill(
+            child: Image.asset(
+              _mainBackgroundImage,
+              fit: BoxFit.cover,
             ),
           ),
 
-          // Language Selection Icon at Top Right (now triggers a PopupMenuButton)
+          // Mute/Unmute Speaker Button
           Positioned(
-            top: MediaQuery.of(context).padding.top + 20, // Adjust top padding
-            right: 20,
-            child: PopupMenuButton<String>(
-              initialValue: _selectedLanguage,
-              onSelected: (String result) {
-                setState(() {
-                  _selectedLanguage = result;
-                  print('Selected language: $result');
-                });
-              },
-              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                PopupMenuItem<String>(
-                  value: 'Hindi',
-                  child: Row(
-                    children: [
-                      Image.asset(
-                        'assets/icons/hindi.png',
-                        width: 24,
-                        height: 24,
-                        errorBuilder: (context, error, stackTrace) {
-                          return const Icon(Icons.language, size: 24, color: Colors.black);
-                        },
-                      ),
-                      const SizedBox(width: 10),
-                      const Text('Hindi'),
-                    ],
-                  ),
-                ),
-                PopupMenuItem<String>(
-                  value: 'English',
-                  child: Row(
-                    children: [
-                      Image.asset(
-                        'assets/icons/english.png',
-                        width: 24,
-                        height: 24,
-                        errorBuilder: (context, error, stackTrace) {
-                          return const Icon(Icons.language, size: 24, color: Colors.black);
-                        },
-                      ),
-                      const SizedBox(width: 10),
-                      const Text('English'),
-                    ],
-                  ),
-                ),
-              ],
-              child: Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF00B3A7), // Teal color from your image
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
-                ),
-                child: Center(
-                  child: Text(
-                    _selectedLanguage == 'Hindi' ? 'अ' : 'EN', // Display 'अ' for Hindi, 'EN' for English
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 20,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          // Speaker/Volume Icon - Repositioned just above the Next button
-          Positioned(
-            bottom: MediaQuery.of(context).size.height * 0.2 + 70,
+            bottom: 200, // Adjusted position to be above the new bottom bar
             right: 30,
             child: GestureDetector(
               onTap: () {
                 setState(() {
                   _isMuted = !_isMuted;
+                  _videoController.setVolume(_isMuted ? 0.0 : 1.0);
                   print(_isMuted ? 'Muted' : 'Unmuted');
                 });
               },
-              child: Image.asset(
-                _isMuted
-                    ? 'assets/icons/mute.png' // 👈 Add a mute icon in your assets folder
-                    : 'assets/icons/volume.png',
+              child: Icon(
+                _isMuted ? Icons.volume_off : Icons.volume_up,
+                size: 40,
                 color: Colors.white,
-                width: 40,
-                height: 40,
-                errorBuilder: (context, error, stackTrace) {
-                  return Icon(
-                    _isMuted ? Icons.volume_off : Icons.volume_up,
-                    size: 40,
-                    color: Colors.white,
-                  );
-                },
               ),
             ),
           ),
 
-          // Next Button
+
+          // Next Button at Bottom Right
           Positioned(
-            bottom: MediaQuery.of(context).size.height * 0.2, // Adjust position above bottom nav
+            top: 50,
             right: 20,
             child: ElevatedButton(
               onPressed: () {
-                // Navigate to HomeScreenCategoryScreen when Next button is pressed
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const HomeScreenCategoryScreen()),
@@ -145,17 +133,113 @@ class _HomeScreenState extends State<HomeScreen> {
                 print('Next button tapped, navigating to HomeScreenCategoryScreen');
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.black.withOpacity(0.3), // Changed to semi-transparent black
-                foregroundColor: Colors.white, // Text color
+                backgroundColor: Colors.black.withOpacity(0.3),
+                foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20), // Increased border radius
+                  borderRadius: BorderRadius.circular(20),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10), // Adjusted padding
-                elevation: 0, // Removed shadow
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                elevation: 0,
               ),
               child: const Text(
-                'Next',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold), // Adjusted font size
+                'Skip',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+
+          // Custom Bottom Navigation Bar
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: 70,
+              padding: const EdgeInsets.symmetric(horizontal: 30),
+              decoration: const BoxDecoration(
+                color: Color(0xFF00B3A7),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(30),
+                  topRight: Radius.circular(30),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Hindi Language Button
+                  GestureDetector(
+                    onTap: () => _toggleLanguage('Hindi'),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        border: _selectedLanguage == 'Hindi'
+                            ? Border.all(color: Colors.white, width: 2)
+                            : null,
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      child: Image.asset(
+                        'assets/icons/hindi.png',
+                        width: 40,
+                        height: 40,
+                      ),
+                    ),
+                  ),
+
+                  // Video Toggle Button
+                  GestureDetector(
+                    onTap: _onVideoToggleTapped,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Image.asset(
+                          'assets/icons/toggle.png',
+                          width: 100,
+                          height: 50,
+                          fit: BoxFit.fill,
+                        ),
+                        AnimatedPositioned(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeOut,
+                          left: _isToggleRight ? 55 : 5,
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                              ],
+                            ),
+                            child: Image.asset(
+                              'assets/icons/video_icon.png',
+                              width: 40,
+                              height:40,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // English Language Button
+                  GestureDetector(
+                    onTap: () => _toggleLanguage('English'),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        border: _selectedLanguage == 'English'
+                            ? Border.all(color: Colors.white, width: 2)
+                            : null,
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      child: Image.asset(
+                        'assets/icons/english.png',
+                        width: 40,
+                        height: 40,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
