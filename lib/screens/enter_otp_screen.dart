@@ -1,6 +1,14 @@
+import 'package:flippra/backend/getuser/getuser.dart';
+import 'package:flippra/backend/register/register.dart';
 import 'package:flutter/material.dart';
 import 'package:flippra/screens/gender_confirm_screen.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_player/video_player.dart';
+
+import 'home_screen.dart';
+import 'home_screen_category.dart';
 
 class EnterOtpScreen extends StatefulWidget {
   final String phoneNumber;
@@ -24,14 +32,15 @@ class _EnterOtpScreenState extends State<EnterOtpScreen> {
   final FocusNode _focusNode3 = FocusNode();
   final FocusNode _focusNode4 = FocusNode();
 
-  // State variable to control the floating animation
-  bool _isKeyboardVisible = false;
+  bool get _isOtpValid {
+    final otp = _otpDigit1Controller.text +
+        _otpDigit2Controller.text +
+        _otpDigit3Controller.text +
+        _otpDigit4Controller.text;
 
-  bool get _isOtpValid =>
-      _otpDigit1Controller.text.length == 1 &&
-          _otpDigit2Controller.text.length == 1 &&
-          _otpDigit3Controller.text.length == 1 &&
-          _otpDigit4Controller.text.length == 1;
+    return otp.length == 4 && otp == '1234';
+  }
+
 
   @override
   void initState() {
@@ -50,13 +59,6 @@ class _EnterOtpScreenState extends State<EnterOtpScreen> {
     _otpDigit2Controller.addListener(_onOtpChanged);
     _otpDigit3Controller.addListener(_onOtpChanged);
     _otpDigit4Controller.addListener(_onOtpChanged);
-
-    // Listen to focus changes on the first OTP field to trigger the animation
-    _focusNode1.addListener(() {
-      setState(() {
-        _isKeyboardVisible = _focusNode1.hasFocus;
-      });
-    });
   }
 
   void _onOtpChanged() {
@@ -77,22 +79,83 @@ class _EnterOtpScreenState extends State<EnterOtpScreen> {
     super.dispose();
   }
 
-  void _verifyOtp() {
-    final String enteredOtp = _otpDigit1Controller.text +
+  void _verifyOtp() async {
+    final Register registerController = Get.put(Register());
+    final GetUser getUserController = Get.put(GetUser());
+    const token = "wvnwivnoweifnqinqfinefnq";
+
+    final enteredOtp = _otpDigit1Controller.text +
         _otpDigit2Controller.text +
         _otpDigit3Controller.text +
         _otpDigit4Controller.text;
 
-    print('OTP entered: $enteredOtp for ${widget.phoneNumber}');
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('OTP accepted. Navigating...')),
-    );
+    if (enteredOtp == '1234') {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('phone_number', widget.phoneNumber);
+      await prefs.setBool('isLoggedIn', true);
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const GenderConfirmScreen()),
-    );
+      try {
+        // Step 1: Register the user
+        await registerController.registeruser(
+          token: token,
+          firstname: "",
+          lastname: "",
+          Gender: "",
+          Email: "",
+          City: "",
+          phone: widget.phoneNumber,
+        );
+        print("Successfully registered");
+      } catch (e) {
+        print("Registration error: $e");
+      }
+
+      // Step 2: Get user details
+      final List<dynamic> userDataList = await getUserController.getuserdetails(
+        token: token,
+        phone: widget.phoneNumber,
+      );
+
+      if (!mounted) return;
+
+      // Step 3: Navigate based on user data
+      if (userDataList.isNotEmpty) {
+        final user = userDataList[0];
+        print("user data from enter otp ${user}");
+
+        final bool hasCompleteInfo =
+            (user['Gender']?.toString().isNotEmpty ?? false) &&
+                (user['firstName']?.toString().isNotEmpty ?? false);
+
+        if (hasCompleteInfo) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const HomeScreenCategoryScreen()),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const GenderConfirmScreen()),
+          );
+        }
+      } else {
+        // No user data found, go to GenderConfirm
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const GenderConfirmScreen()),
+        );
+      }
+    } else {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('❌ Invalid OTP')),
+      );
+    }
   }
+
+
+
+
 
   Widget _otpDigitField(TextEditingController controller, FocusNode currentFocusNode, FocusNode? nextFocusNode) {
     return SizedBox(
@@ -128,25 +191,14 @@ class _EnterOtpScreenState extends State<EnterOtpScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
-
-    // Adjusted the top position calculation
-    final containerHeight = 250.0; // Approximate height of the teal container
-    final animatedTop = keyboardHeight > 0
-        ? screenHeight - keyboardHeight - containerHeight
-        : screenHeight * 0.55;
-
     return Scaffold(
-      // Prevents the screen from resizing when the keyboard appears
-      resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
           Positioned(
             top: 100,
             left: 0,
             right: 0,
-            height: screenHeight * 0.64,
+            height: MediaQuery.of(context).size.height * 0.64,
             child: Container(
               color: Colors.white,
               child: _videoController.value.isInitialized
@@ -164,15 +216,11 @@ class _EnterOtpScreenState extends State<EnterOtpScreen> {
                   : const SizedBox(),
             ),
           ),
-          // Animated bottom teal section
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-            // Adjust top based on whether the keyboard is visible
-            top: animatedTop,
+          Positioned(
+            top: MediaQuery.of(context).size.height * 0.31,
             left: 0,
             right: 0,
-            bottom: _isKeyboardVisible ? 0 : -20,
+            bottom: 0,
             child: Container(
               decoration: const BoxDecoration(
                 color: Colors.teal,
@@ -181,65 +229,72 @@ class _EnterOtpScreenState extends State<EnterOtpScreen> {
                   topRight: Radius.circular(50.0),
                 ),
               ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 40.0, vertical: 15.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Enter OTP',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white),
-                    ),
-                    const SizedBox(height: 30),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        _otpDigitField(_otpDigit1Controller, _focusNode1, _focusNode2),
-                        _otpDigitField(_otpDigit2Controller, _focusNode2, _focusNode3),
-                        _otpDigitField(_otpDigit3Controller, _focusNode3, _focusNode4),
-                        _otpDigitField(_otpDigit4Controller, _focusNode4, null),
-                      ],
-                    ),
-                    Align(
-                      alignment: Alignment.center,
-                      child: TextButton(
-                        onPressed: () {
-                          print('Resending OTP to: ${widget.phoneNumber}');
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Resending OTP...')),
-                          );
-                        },
-                        child: Text(
-                          'Resend OTP',
-                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.white),
-                        ),
+            ),
+          ),
+          Positioned(
+            top: MediaQuery.of(context).size.height * 0.34,
+            left: 0,
+            right: 0,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    'Enter OTP',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white),
+                  ),
+                  const SizedBox(height: 30),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _otpDigitField(_otpDigit1Controller, _focusNode1, _focusNode2),
+                      _otpDigitField(_otpDigit2Controller, _focusNode2, _focusNode3),
+                      _otpDigitField(_otpDigit3Controller, _focusNode3, _focusNode4),
+                      _otpDigitField(_otpDigit4Controller, _focusNode4, null),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Align(
+                    alignment: Alignment.center,
+                    child: TextButton(
+                      onPressed: () {
+                        print('Resending OTP to: ${widget.phoneNumber}');
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Resending OTP...')),
+                        );
+                      },
+                      child: Text(
+                        'Resend OTP',
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.white),
                       ),
                     ),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 55,
-                      child: ElevatedButton(
-                        onPressed: _isOtpValid ? _verifyOtp : null, // ✅ Disabled when incomplete
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange,
-                          disabledBackgroundColor: Colors.orange.shade200, // ✅ Light orange when disabled
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          elevation: 3,
+                  ),
+                  const SizedBox(height: 30),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 55,
+                    child: ElevatedButton(
+                      onPressed: _isOtpValid ? _verifyOtp : null, // ✅ Disabled when incomplete
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        disabledBackgroundColor: Colors.orange.shade200, // ✅ Light orange when disabled
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Text(
-                          'Verify',
-                          style: Theme.of(context)
-                              .textTheme
-                              .labelLarge
-                              ?.copyWith(fontSize: 18, color: Colors.white),
-                        ),
+                        elevation: 3,
+                      ),
+                      child: Text(
+                        'Verify',
+                        style: Theme.of(context)
+                            .textTheme
+                            .labelLarge
+                            ?.copyWith(fontSize: 18, color: Colors.white),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),

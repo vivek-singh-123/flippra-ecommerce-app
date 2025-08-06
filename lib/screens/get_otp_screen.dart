@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flippra/screens/enter_otp_screen.dart';
 import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_player/video_player.dart';
 
 import '../backend/register/register.dart';
@@ -15,13 +17,7 @@ class GetOtpScreen extends StatefulWidget {
 class _GetOtpScreenState extends State<GetOtpScreen> {
   late VideoPlayerController _videoController;
   final TextEditingController _whatsappNoController = TextEditingController();
-  bool _isWhatsappNumberValid = false;
-
-  // Controller to handle the animation for the bottom section
-  final FocusNode _phoneFocusNode = FocusNode();
-
-  // Variable to track if the keyboard is open
-  bool _isKeyboardVisible = false;
+  bool _isWhatsappNumberValid = false; // To simulate validation checkmark
 
   @override
   void initState() {
@@ -35,66 +31,48 @@ class _GetOtpScreenState extends State<GetOtpScreen> {
       }).catchError((error) {
         print("Error initializing video on GetOtpScreen: $error");
       });
-
-    // Listen to focus changes on the text field
-    _phoneFocusNode.addListener(() {
-      setState(() {
-        _isKeyboardVisible = _phoneFocusNode.hasFocus;
-      });
-    });
   }
 
   @override
   void dispose() {
     _whatsappNoController.dispose();
     _videoController.dispose();
-    _phoneFocusNode.dispose();
     super.dispose();
   }
 
-  Future<void> _register(BuildContext context, String number) async {
+
+  _register(BuildContext context, String number) async {
     final Register controller = Get.put(Register());
 
     try {
-      await controller.Regiter(
-        token: "wvnwivnoweifnqinqfinefnq",
-        firstname: "",
-        lastname: "",
-        Gender: "",
-        Email: "",
-        City: "",
-        phone: number,
-      );
-      print("Successfully Register");
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('userPhone', number);
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => EnterOtpScreen(phoneNumber: _whatsappNoController.text),
+          builder: (context) => EnterOtpScreen(phoneNumber: number),
         ),
       );
       controller.isLoading.value = false;
     } catch (e) {
-      print('❌ Registeration Failed: $e');
-    } finally {
+      print('❌ Registration Failed: $e');
+    }
+    finally {
       controller.isLoading.value = false;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Get the screen size
-    final screenHeight = MediaQuery.of(context).size.height;
-
     return Scaffold(
-      resizeToAvoidBottomInset: false, // Prevents screen from resizing with keyboard
       body: Stack(
         children: [
           // Video background
           Positioned(
             top: 0,
             left: 0,
-            right: 0, // Changed from 20 to 0 to fill the width
-            height: screenHeight * 0.8,
+            right: 0,
+            height: MediaQuery.of(context).size.height * 0.6,
             child: Container(
               color: Colors.white,
               child: _videoController.value.isInitialized
@@ -113,14 +91,12 @@ class _GetOtpScreenState extends State<GetOtpScreen> {
             ),
           ),
 
-          // Animated bottom section
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 300), // Adjust animation speed
-            curve: Curves.easeOut,
-              top: _isKeyboardVisible ? screenHeight * 0.35 : screenHeight * 0.55,
+          // Bottom teal section
+          Positioned(
+            top: MediaQuery.of(context).size.height * 0.3,
             left: 0,
             right: 0,
-            bottom: _isKeyboardVisible ? 0 : -20, // Adjust bottom to hide on animation start
+            bottom: 0,
             child: Container(
               decoration: const BoxDecoration(
                 color: Colors.teal,
@@ -137,7 +113,6 @@ class _GetOtpScreenState extends State<GetOtpScreen> {
                     // WhatsApp Number Field
                     TextField(
                       controller: _whatsappNoController,
-                      focusNode: _phoneFocusNode, // Assign the focus node
                       keyboardType: TextInputType.phone,
                       maxLength: 10,
                       decoration: InputDecoration(
@@ -171,7 +146,7 @@ class _GetOtpScreenState extends State<GetOtpScreen> {
                       },
                     ),
                     const SizedBox(height: 20),
-                    // Get OTP Button
+                    // Get OTP Button (updated line here!)
                     SizedBox(
                       width: double.infinity,
                       height: 55,

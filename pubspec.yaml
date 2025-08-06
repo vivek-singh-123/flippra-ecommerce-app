@@ -1,24 +1,29 @@
 name: flippra
 description: "A new Flutter project."
 
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+publish_to: 'none'
 
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.8.1
+  sdk: '>=3.6.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
   video_player: ^2.8.1
+  audioplayers: ^5.2.1
   http: ^1.2.1
   get: ^4.7.2
+  shared_preferences: ^2.2.2
+  carousel_slider: ^4.2.1
+  just_audio: ^0.9.36
   geolocator: ^11.0.0
-  geocoding: ^3.0.0
-  permission_handler: ^11.3.0
+  geocoding: ^2.1.0
+  permission_handler: ^11.0.1
   google_fonts: ^6.1.0
+
 
 dev_dependencies:
   flutter_test:
@@ -29,8 +34,8 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/icons/
     - assets/
+    - assets/icons/
     - assets/videos/
     - assets/icons/whatsapp.png
     - assets/icons/man.png

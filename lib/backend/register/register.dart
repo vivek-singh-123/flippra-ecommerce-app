@@ -6,7 +6,7 @@ class Register extends GetxController{
   final isLoading = false.obs;
   final message = ''.obs;
 
-  Future<void> Regiter ({
+  Future<void> registeruser ({
     required String token,
     required String firstname,
     required String lastname,
@@ -34,7 +34,7 @@ class Register extends GetxController{
           }
       );
       if(response.statusCode == 200){
-        print("✅ Successfully joined");
+        print("✅ Successfully registered");
         print(response.body);
       }
     }

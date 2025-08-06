@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:google_fonts/google_fonts.dart';
-
+import 'package:shared_preferences/shared_preferences.dart'; // Import SharedPreferences
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
@@ -12,6 +12,7 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   late VideoPlayerController _controller;
+  bool _showButtons = false; // Control visibility of buttons
 
   @override
   void initState() {
@@ -23,7 +24,38 @@ class _SplashScreenState extends State<SplashScreen> {
         setState(() {});
         _controller.play();
         _controller.setLooping(true); // Loop the video
+
+        // ⭐ FIX: After video initializes, start the login check
+        _checkLoginStatus();
+      }).catchError((error) {
+        // Handle video initialization errors, e.g., if video file is missing
+        print("Error initializing video: $error");
+        // Even if video fails, proceed with login check
+        _checkLoginStatus();
       });
+  }
+
+  // ⭐ FIX: Integrated login check logic from LoginCheckWrapper
+  Future<void> _checkLoginStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final isLoggedIn = prefs.getBool('isLoggedIn');
+
+    // Optional: Add a minimum display duration for the splash screen
+    // This ensures users see the video/splash content for at least 3 seconds
+    await Future.delayed(const Duration(seconds: 3));
+
+    // Ensure the widget is still mounted before navigating
+    if (!mounted) return;
+
+    if (isLoggedIn == true) {
+      // If logged in, navigate directly to HomeScreen
+      Navigator.of(context).pushReplacementNamed('/homecategory');
+    } else {
+      // If not logged in, show the login/create account buttons
+      setState(() {
+        _showButtons = true;
+      });
+    }
   }
 
   @override
@@ -94,52 +126,55 @@ class _SplashScreenState extends State<SplashScreen> {
                 ),
                 const SizedBox(height: 150),
 
-                // Login Button
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 8.0),
-                  child: ElevatedButton(
-                    onPressed: () {
-                      // Navigate to the get_otp_screen
-                      Navigator.of(context).pushNamed('/get_otp');
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.black,
-                      minimumSize: const Size(double.infinity, 50),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                // ⭐ FIX: Only show buttons if _showButtons is true
+                if (_showButtons) ...[
+                  // Login Button
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 8.0),
+                    child: ElevatedButton(
+                      onPressed: () {
+                        _controller.pause(); // Pause video when navigating
+                        Navigator.of(context).pushNamed('/get_otp');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black,
+                        minimumSize: const Size(double.infinity, 50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        side: const BorderSide(color: Colors.green, width: 2),
                       ),
-                      side: const BorderSide(color: Colors.green, width: 2),
-                    ),
-                    child: Text(
-                      'Login | App',
-                      style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
+                      child: Text(
+                        'Login | App',
+                        style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
+                      ),
                     ),
                   ),
-                ),
 
-                // Create Account Button
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 8.0),
-                  child: ElevatedButton(
-                    onPressed: () {
-                      // Navigate to the gender_confirm_screen
-                      Navigator.of(context).pushNamed('/gender_confirm');
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size(double.infinity, 50),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  // Create Account Button
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 8.0),
+                    child: ElevatedButton(
+                      onPressed: () {
+                        _controller.pause(); // Pause video when navigating
+                        Navigator.of(context).pushNamed('/get_otp');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(double.infinity, 50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        'Create | account',
+                        style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
                       ),
                     ),
-                    child: Text(
-                      'Create | account',
-                      style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
-                    ),
                   ),
-                ),
+                ],
 
                 const SizedBox(height: 24),
 
