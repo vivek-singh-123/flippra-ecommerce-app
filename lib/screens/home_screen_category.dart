@@ -10,6 +10,7 @@ import '../backend/getcategory/categoryModel.dart';
 import '../backend/getlocation/locationmodel.dart';
 import '../utils/shared_prefs_helper.dart';
 import 'get_otp_screen.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 class HomeScreenCategoryScreen extends StatefulWidget {
   const HomeScreenCategoryScreen({super.key});
@@ -168,7 +169,7 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
   }
 
   void _showSettingsDialog(BuildContext context) {
-    print('Attempting to show settings dialog...');
+    bool isServiceSelected = true; // Initial state
 
     final RenderBox? renderBox = _settingsIconKey.currentContext?.findRenderObject() as RenderBox?;
     if (renderBox == null) {
@@ -180,16 +181,11 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
     final Size size = renderBox.size;
 
     final double screenWidth = MediaQuery.of(context).size.width;
-    final double screenHeight = MediaQuery.of(context).size.height;
-
     const double dialogContentWidth = 90.0;
-    const double singleOptionHeight = 60.0;
-    const int numberOfOptions = 3;
-    final double dialogContentHeight = singleOptionHeight * numberOfOptions;
-
-    double dialogTop = offset.dy - dialogContentHeight;
+    const double dialogContentHeight = 60.0;
     const double padding = 8.0;
 
+    double dialogTop = offset.dy - dialogContentHeight;
     if (dialogTop < MediaQuery.of(context).padding.top + padding) {
       dialogTop = MediaQuery.of(context).padding.top + padding;
     }
@@ -206,47 +202,57 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
         opaque: false,
         barrierDismissible: true,
         pageBuilder: (context, animation, secondaryAnimation) {
-          return GestureDetector(
-            onTap: () => Navigator.of(context).pop(),
-            child: Scaffold(
-              backgroundColor: Colors.black.withOpacity(0.1),
-              body: Stack(
-                children: [
-                  Positioned(
-                    top: dialogTop,
-                    left: dialogLeft,
-                    child: ScaleTransition(
-                      scale: CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
-                      child: Material(
-                        color: Colors.white,
-                        elevation: 8.0,
-                        borderRadius: BorderRadius.circular(12.0),
-                        child: SizedBox(
-                          width: dialogContentWidth,
-                          height: dialogContentHeight,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: <Widget>[
-                              _buildDialogOption(context, 'assets/icons/settings.png', () {
-                                Navigator.pop(context);
-                              }),
-                              _buildDialogOption(context, 'assets/icons/settings.png', () {
-                                print('Theme tapped');
-                                Navigator.pop(context);
-                              }),
-                              _buildDialogOption(context, 'assets/icons/settings.png', () {
-                                print('About tapped');
-                                Navigator.pop(context);
-                              }),
-                            ],
+          return StatefulBuilder(
+            builder: (context, setState) {
+              return GestureDetector(
+                onTap: () => Navigator.of(context).pop(),
+                child: Scaffold(
+                  backgroundColor: Colors.black.withOpacity(0.1),
+                  body: Stack(
+                    children: [
+                      Positioned(
+                        top: dialogTop,
+                        left: dialogLeft,
+                        child: ScaleTransition(
+                          scale: CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
+                          child: Material(
+                            color: Colors.white,
+                            elevation: 8.0,
+                            borderRadius: BorderRadius.circular(12.0),
+                            child: InkWell(
+                              onTap: () {
+                                setState(() {
+                                  isServiceSelected = !isServiceSelected;
+                                });
+                              },
+                              child: SizedBox(
+                                width: dialogContentWidth,
+                                height: dialogContentHeight,
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Image.asset(
+                                      'assets/icons/service.png',
+                                      width: 30,
+                                      height: 30,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      isServiceSelected ? 'Service' : 'Settings',
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           );
         },
         transitionDuration: const Duration(milliseconds: 300),
@@ -343,28 +349,13 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
                               alignment: Alignment.center,
                               children: [
                                 Image.asset(
-                                  'assets/icons/toggle.png',
-                                  width: 75,
-                                  height: 60,
+                                  'assets/icons/man.png',
+                                  width: 34,
+                                  height: 34,
                                   fit: BoxFit.contain,
                                   errorBuilder: (context, error, stackTrace) {
-                                    return const Icon(Icons.error, color: Colors.purple,
-                                        size: 60);
+                                    return const Icon(Icons.error, color: Colors.purple, size: 34);
                                   },
-                                ),
-                                Positioned(
-                                  top: 11,
-                                  left: 42,
-                                  child: Image.asset(
-                                    'assets/icons/man.png',
-                                    width: 34,
-                                    height: 34,
-                                    fit: BoxFit.contain,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return const Icon(
-                                          Icons.error, color: Colors.purple, size: 34);
-                                    },
-                                  ),
                                 ),
                               ],
                             ),
@@ -547,11 +538,10 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
                         children: [
                           _buildBottomNavIcon(
                             key: _settingsIconKey,
-                            // Assign GlobalKey to Settings icon
                             iconPath: 'assets/icons/settings.png',
                             label: 'Settings',
                             index: 0,
-                            onTap: () => _onItemTapped(0),
+                            onTap: () => _showSettingsDialog(context),
                           ),
                           _buildBottomNavIcon(
                             iconPath: 'assets/icons/person.png',

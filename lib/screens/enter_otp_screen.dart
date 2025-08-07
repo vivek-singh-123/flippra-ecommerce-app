@@ -167,16 +167,30 @@ class _EnterOtpScreenState extends State<EnterOtpScreen> {
         keyboardType: TextInputType.number,
         maxLength: 1,
         textAlign: TextAlign.center,
-        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87),
+        style: const TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
+          color: Colors.black87,
+        ),
         decoration: InputDecoration(
           counterText: "",
           filled: true,
           fillColor: Colors.white,
+          contentPadding: EdgeInsets.zero,
+
+          // 🚫 REMOVE default focus outline
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10.0),
+            borderSide: BorderSide(color: Colors.transparent),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10.0),
+            borderSide: BorderSide(color: Colors.transparent),
+          ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10.0),
             borderSide: BorderSide.none,
           ),
-          contentPadding: EdgeInsets.zero,
         ),
         onChanged: (value) {
           if (value.length == 1 && nextFocusNode != null) {
@@ -191,14 +205,20 @@ class _EnterOtpScreenState extends State<EnterOtpScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final viewInsets = MediaQuery.of(context).viewInsets.bottom;
+    final _isKeyboardVisible = viewInsets > 0;
+
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       body: Stack(
         children: [
+          // ✅ Full-width video background
           Positioned(
-            top: 100,
+            top: 0,
             left: 0,
             right: 0,
-            height: MediaQuery.of(context).size.height * 0.64,
+            height: screenHeight * 0.8,
             child: Container(
               color: Colors.white,
               child: _videoController.value.isInitialized
@@ -216,11 +236,15 @@ class _EnterOtpScreenState extends State<EnterOtpScreen> {
                   : const SizedBox(),
             ),
           ),
-          Positioned(
-            top: MediaQuery.of(context).size.height * 0.31,
+
+          // ✅ Animated OTP input container
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+            top: _isKeyboardVisible ? screenHeight * 0.31 : screenHeight * 0.55,
             left: 0,
             right: 0,
-            bottom: 0,
+            bottom: _isKeyboardVisible ? 0 : -20,
             child: Container(
               decoration: const BoxDecoration(
                 color: Colors.teal,
@@ -229,75 +253,79 @@ class _EnterOtpScreenState extends State<EnterOtpScreen> {
                   topRight: Radius.circular(50.0),
                 ),
               ),
-            ),
-          ),
-          Positioned(
-            top: MediaQuery.of(context).size.height * 0.34,
-            left: 0,
-            right: 0,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Text(
-                    'Enter OTP',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white),
-                  ),
-                  const SizedBox(height: 30),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _otpDigitField(_otpDigit1Controller, _focusNode1, _focusNode2),
-                      _otpDigitField(_otpDigit2Controller, _focusNode2, _focusNode3),
-                      _otpDigitField(_otpDigit3Controller, _focusNode3, _focusNode4),
-                      _otpDigitField(_otpDigit4Controller, _focusNode4, null),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  Align(
-                    alignment: Alignment.center,
-                    child: TextButton(
-                      onPressed: () {
-                        print('Resending OTP to: ${widget.phoneNumber}');
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Resending OTP...')),
-                        );
-                      },
-                      child: Text(
-                        'Resend OTP',
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.white),
-                      ),
+              padding: const EdgeInsets.symmetric(horizontal: 30.0, vertical: 30.0),
+
+              // ✅ Make it scrollable to avoid overflow
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Enter OTP',
+                      style: Theme.of(context)
+                          .textTheme
+                          .headlineSmall
+                          ?.copyWith(color: Colors.white),
                     ),
-                  ),
-                  const SizedBox(height: 30),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 55,
-                    child: ElevatedButton(
-                      onPressed: _isOtpValid ? _verifyOtp : null, // ✅ Disabled when incomplete
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        disabledBackgroundColor: Colors.orange.shade200, // ✅ Light orange when disabled
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                    const SizedBox(height: 30),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _otpDigitField(_otpDigit1Controller, _focusNode1, _focusNode2),
+                        _otpDigitField(_otpDigit2Controller, _focusNode2, _focusNode3),
+                        _otpDigitField(_otpDigit3Controller, _focusNode3, _focusNode4),
+                        _otpDigitField(_otpDigit4Controller, _focusNode4, null),
+                      ],
+                    ),
+
+                    Align(
+                      alignment: Alignment.center,
+                      child: TextButton(
+                        onPressed: () {
+                          print('Resending OTP to: ${widget.phoneNumber}');
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Resending OTP...')),
+                          );
+                        },
+                        child: Text(
+                          'Resend OTP',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyLarge
+                              ?.copyWith(color: Colors.white),
                         ),
-                        elevation: 3,
-                      ),
-                      child: Text(
-                        'Verify',
-                        style: Theme.of(context)
-                            .textTheme
-                            .labelLarge
-                            ?.copyWith(fontSize: 18, color: Colors.white),
                       ),
                     ),
-                  ),
-                ],
+                    SizedBox(
+                      width: double.infinity,
+                      height: 55,
+                      child: ElevatedButton(
+                        onPressed: _isOtpValid ? _verifyOtp : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          disabledBackgroundColor: Colors.orange.shade200,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          elevation: 3,
+                        ),
+                        child: Text(
+                          'Verify',
+                          style: Theme.of(context)
+                              .textTheme
+                              .labelLarge
+                              ?.copyWith(fontSize: 18, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
+
         ],
       ),
     );
