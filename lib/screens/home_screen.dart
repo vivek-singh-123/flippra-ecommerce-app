@@ -310,10 +310,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             left: _isToggleRight ? 55 : 5,
                             top: 5,
                             child: Container(
-                              width: 40,
+                              width: 45,
                               height: 40,
                               decoration: const BoxDecoration(
-                                color: Colors.white,
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(

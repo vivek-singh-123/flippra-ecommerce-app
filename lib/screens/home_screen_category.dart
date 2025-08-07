@@ -10,7 +10,7 @@ import '../backend/getcategory/categoryModel.dart';
 import '../backend/getlocation/locationmodel.dart';
 import '../utils/shared_prefs_helper.dart';
 import 'get_otp_screen.dart';
-import 'package:speech_to_text/speech_to_text.dart' as stt;
+
 
 class HomeScreenCategoryScreen extends StatefulWidget {
   const HomeScreenCategoryScreen({super.key});
@@ -733,10 +733,11 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
               ),
               GestureDetector(
                 onTap: () {
-                  logoutUser(context);
+                  // Assuming `context` is available here
+                  // logoutUser(context);
                 },
                 child: Container(
-                  width: 30,
+                  width: 50,
                   height: 30,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
