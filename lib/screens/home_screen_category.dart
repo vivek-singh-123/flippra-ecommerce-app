@@ -10,7 +10,7 @@ import '../backend/getcategory/categoryModel.dart';
 import '../backend/getlocation/locationmodel.dart';
 import '../utils/shared_prefs_helper.dart';
 import 'get_otp_screen.dart';
-import 'package:speech_to_text/speech_to_text.dart' as stt;
+
 
 class HomeScreenCategoryScreen extends StatefulWidget {
   const HomeScreenCategoryScreen({super.key});
@@ -368,6 +368,7 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
                                 decoration: BoxDecoration(
                                   color: Colors.white.withOpacity(0.9),
                                   borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.black),
                                 ),
                                 child: Row(
                                   children: [
@@ -389,6 +390,13 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
                                     const Padding(
                                       padding: EdgeInsets.all(8.0),
                                       child: Icon(Icons.mic, color: Colors.grey),
+                                    ),
+                                    // Vertical Divider as a pipe "|"
+                                    Container(
+                                      height: 24,
+                                      width: 1,
+                                      color: Colors.grey.shade300,
+                                      margin: const EdgeInsets.symmetric(horizontal: 8),
                                     ),
                                     Container(
                                       padding: const EdgeInsets.symmetric(
@@ -687,22 +695,27 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
       ),
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 7.0),
+          padding: const EdgeInsets.symmetric(horizontal: 17.0, vertical: 10.0),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween, // 👈 KEY LINE
             children: [
+              // Location Info
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        Text(
-                          location.main,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                        Flexible(
+                          child: Text(
+                            location.main,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         const SizedBox(width: 4),
@@ -720,25 +733,29 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
                         color: Colors.white70,
                         fontSize: 12,
                       ),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    Text(
-                      location.landmark,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
-                      ),
-                    ),
+                    // If needed later:
+                    // Text(
+                    //   location.landmark,
+                    //   style: const TextStyle(
+                    //     color: Colors.white70,
+                    //     fontSize: 12,
+                    //   ),
+                    // ),
                   ],
                 ),
               ),
+
+              // WhatsApp Icon
               GestureDetector(
                 onTap: () {
-                  logoutUser(context);
+                  // Your tap action here
                 },
                 child: Container(
-                  width: 30,
-                  height: 30,
-                  decoration: BoxDecoration(
+                  width: 40,
+                  height: 40,
+                  decoration: const BoxDecoration(
                     shape: BoxShape.circle,
                     image: DecorationImage(
                       image: AssetImage('assets/icons/whatsapp.png'),
@@ -753,6 +770,7 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
       ),
     );
   }
+
 
   Widget _buildSliderCard(BuildContext context, List<SliderModel> sliderItems) {
     return SizedBox(

@@ -52,11 +52,24 @@ class LocationFetchApi {
 
       if (placemarks.isNotEmpty) {
         Placemark place = placemarks[0];
-        print("Location fetched : ${place}");
+
+        // Build the full address string
+        String fullAddress = [
+          place.name,
+          place.thoroughfare,
+          place.subLocality,
+          place.locality,
+          place.administrativeArea,
+          place.postalCode,
+          place.country
+        ].where((part) => part != null && part!.trim().isNotEmpty).join(', ');
+
+        print("📍 Location fetched: $fullAddress");
+
         return LocationModel(
-          main: "${place.locality ?? ''} ${place.subLocality ?? ''}".trim(),
-          detail: "${place.street ?? ''}".trim(),
-          landmark: "${place.name ?? ''}".trim(),
+          main: place.locality ?? '', // e.g., "New Delhi"
+          detail: fullAddress,        // full formatted address
+          landmark: place.name ?? '', // e.g., "2/7"
         );
       } else {
         return LocationModel(

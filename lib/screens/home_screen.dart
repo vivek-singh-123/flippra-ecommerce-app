@@ -187,7 +187,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           // ⭐ FIX: Show a loading indicator while loading
             Positioned.fill(
               child: Container(
-                color: Colors.black, // A dark background for the loading indicator
+                color: Colors.black,
+                // A dark background for the loading indicator
                 child: const Center(
                   child: CircularProgressIndicator(
                     valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
@@ -199,7 +200,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             _videoController.value.isInitialized
                 ? Positioned.fill(
               child: FittedBox(
-                fit: BoxFit.cover,
+                fit: BoxFit.contain,
                 child: SizedBox(
                   width: _videoController.value.size.width,
                   height: _videoController.value.size.height,
@@ -215,7 +216,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
           // Your other UI widgets here...
           Positioned(
-            top: MediaQuery.of(context).padding.top + 20,
+            top: MediaQuery
+                .of(context)
+                .padding
+                .top + 20,
             right: 20,
             child: ElevatedButton(
               onPressed: () {
@@ -310,10 +314,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             left: _isToggleRight ? 55 : 5,
                             top: 5,
                             child: Container(
-                              width: 40,
+                              width: 45,
                               height: 40,
                               decoration: const BoxDecoration(
-                                color: Colors.white,
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
