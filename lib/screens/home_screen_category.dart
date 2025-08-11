@@ -13,14 +13,42 @@ import '../utils/shared_prefs_helper.dart';
 import 'get_otp_screen.dart';
 import 'package:flutter_speech/flutter_speech.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
+// Define GetChildCategory (from your previous code)
+class GetChildCategory {
+  static Future<List<CategoryModel>> getchildcategorydetails(String categoryType) async {
+    final url = Uri.parse("https://flippraa.anklegaming.live/APIs/APIs.asmx/ShowChildCategory");
+
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: {
+        'token': "wvnwivnoweifnqinqfinefnq",
+        'CategoryType': categoryType,
+      },
+    );
+
+    print("Status code: ${response.statusCode}");
+    print("Raw response:\n ${response.body}");
+
+    if (response.statusCode == 200) {
+      final List<dynamic> jsonData = jsonDecode(response.body);
+      final category = jsonData.map((item) => CategoryModel.fromJson(item)).toList();
+      print("Parsed Category List: ${category.length} items");
+      return category;
+    } else {
+      throw Exception('❌ Failed to load child categories. Status: ${response.statusCode}');
+    }
+  }
+}
 
 class HomeScreenCategoryScreen extends StatefulWidget {
   const HomeScreenCategoryScreen({super.key});
 
   @override
-  State<HomeScreenCategoryScreen> createState() =>
-      _HomeScreenCategoryScreenState();
+  State<HomeScreenCategoryScreen> createState() => _HomeScreenCategoryScreenState();
 }
 
 class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
@@ -30,6 +58,8 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
   bool _isToggleRight = true;
   bool _isSettingsActive = true;
   bool _isSearching = false;
+  late List<CategoryModel> _childcategory = [];
+  late List<ProductCategoryModel> _categoryList = []; // Changed to List<CategoryModel>
   late Future<List<ProductCategoryModel>> _category;
   late Future<List<SliderModel>> _slider;
   LocationModel? location;
@@ -37,12 +67,12 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
   final GlobalKey _languageIconKey = GlobalKey();
   final GlobalKey _settingsIconKey = GlobalKey();
 
-  // Microphone functionality ke liye naye variables
+  // Microphone functionality
   final TextEditingController _searchController = TextEditingController();
   late SpeechRecognition _speech;
   bool _isListening = false;
 
-  // Naya aur behtar animation effect
+  // Animation
   late AnimationController _animationController;
   late Animation<double> _animation;
 
@@ -67,7 +97,6 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
       _searchController.text = recognizedText;
     });
 
-    // Jab mic sunna band kare
     _speech.setRecognitionCompleteHandler((String recognizedText) {
       setState(() {
         _isListening = false;
@@ -76,14 +105,12 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
       print('❌ Listening complete. _isListening is now: $_isListening');
     });
 
-    // Yeh naya handler add kiya hai
     _speech.setErrorHandler(() {
       setState(() {
         _isListening = false;
       });
       _animationController.stop();
-      print(
-          '⚠️ Speech recognition error occurred. _isListening is now: $_isListening');
+      print('⚠️ Speech recognition error occurred. _isListening is now: $_isListening');
     });
   }
 
@@ -112,22 +139,23 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
     _speech.stop();
   }
 
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-    print('Selected bottom nav item: $index');
-    if (index == 0) {
-      _showSettingsDialog(context);
+  void _onItemTapped(String categoryId) async {
+    try {
+      final childCategories = await GetChildCategory.getchildcategorydetails(categoryId);
+      setState(() {
+        _childcategory = childCategories;
+        _selectedIndex = _categoryList.indexWhere((item) => item.id == categoryId) + 1;
+      });
+    } catch (e) {
+      print('Error fetching child categories: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load child categories: $e')),
+      );
     }
   }
 
   void _showLanguageSelection(BuildContext context) {
-    print('Attempting to show language selection dialog...');
-
-    final RenderBox? renderBox =
-    _languageIconKey.currentContext?.findRenderObject() as RenderBox?;
-
+    final RenderBox? renderBox = _languageIconKey.currentContext?.findRenderObject() as RenderBox?;
     if (renderBox == null) {
       print('ERROR: Language icon RenderBox not found.');
       return;
@@ -143,7 +171,6 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
     const double dialogContentHeight = 56.0;
 
     double dialogLeft = offset.dx + size.width - dialogContentWidth;
-
     const double horizontalPadding = 8.0;
 
     if (dialogLeft < horizontalPadding) {
@@ -154,7 +181,6 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
     }
 
     double dialogTop = offset.dy + size.height + 8.0;
-
     const double bottomNavHeight = 100.0;
     if (dialogTop + dialogContentHeight > screenHeight - bottomNavHeight) {
       dialogTop = offset.dy - dialogContentHeight - 8.0;
@@ -170,8 +196,7 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
       optionLanguage = 'Hindi';
       optionDisplayWidget = const Text(
         'अ',
-        style: TextStyle(
-            color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
+        style: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
       );
     } else {
       optionLanguage = 'English';
@@ -192,8 +217,7 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
       barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
       barrierColor: Colors.black.withOpacity(0.1),
       transitionDuration: const Duration(milliseconds: 200),
-      pageBuilder: (BuildContext buildContext, Animation<double> animation,
-          Animation<double> secondaryAnimation) {
+      pageBuilder: (BuildContext buildContext, Animation<double> animation, Animation<double> secondaryAnimation) {
         return Align(
           alignment: Alignment.topLeft,
           child: Transform.translate(
@@ -240,8 +264,7 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
   }
 
   void _showSettingsDialog(BuildContext context) {
-    final RenderBox? renderBox =
-    _settingsIconKey.currentContext?.findRenderObject() as RenderBox?;
+    final RenderBox? renderBox = _settingsIconKey.currentContext?.findRenderObject() as RenderBox?;
     if (renderBox == null) {
       print('ERROR: Product icon RenderBox not found.');
       return;
@@ -282,20 +305,19 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
                     top: dialogTop,
                     left: dialogLeft,
                     child: ScaleTransition(
-                      scale: CurvedAnimation(
-                          parent: animation, curve: Curves.easeOutBack),
+                      scale: CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
                       child: Material(
                         color: Colors.white,
                         elevation: 8.0,
                         borderRadius: BorderRadius.circular(12.0),
                         child: InkWell(
                           onTap: () {
-                            // This setState is crucial for updating the main widget
                             setState(() {
-                              _isSettingsActive =
-                              !_isSettingsActive; // Toggle the state
+                              _isSettingsActive = !_isSettingsActive;
                               _category = Getcategory.getcategorydetails(
                                   _isSettingsActive ? 'Service' : 'Product');
+                              _childcategory = [];
+                              _categoryList = []; // Clear category list
                             });
                             Navigator.of(context).pop();
                           },
@@ -306,15 +328,13 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Image.asset(
-                                  _isSettingsActive
-                                      ? 'assets/icons/service.png'
-                                      : 'assets/icons/product.png',
+                                  _isSettingsActive ? 'assets/icons/product.png' : 'assets/icons/service.png',
                                   width: 30,
                                   height: 30,
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  _isSettingsActive ? 'Service' : 'Product',
+                                  _isSettingsActive ? 'Product' : 'Service',
                                   style: const TextStyle(fontSize: 12),
                                 ),
                               ],
@@ -340,15 +360,13 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
     );
   }
 
-  Widget _buildDialogOption(
-      BuildContext context, String iconPath, VoidCallback onTap) {
+  Widget _buildDialogOption(BuildContext context, String iconPath, VoidCallback onTap) {
     return ListTile(
       leading: Image.asset(
         iconPath,
         width: 40,
         height: 40,
-        errorBuilder: (context, error, stackTrace) =>
-        const Icon(Icons.error, size: 40, color: Colors.red),
+        errorBuilder: (context, error, stackTrace) => const Icon(Icons.error, size: 40, color: Colors.red),
       ),
       onTap: onTap,
     );
@@ -356,7 +374,6 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
 
   Future<void> logoutUser(BuildContext context) async {
     await SharedPrefsHelper.clearUserData();
-
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (context) => const GetOtpScreen()),
           (Route<dynamic> route) => false,
@@ -373,12 +390,12 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
   @override
   void initState() {
     super.initState();
-    _category = Getcategory.getcategorydetails(
-        _isSettingsActive ? 'Service' : 'Product');
+    _category = Getcategory.getcategorydetails(_isSettingsActive ? 'Service' : 'Product');
     _slider = GetSlider.getslider();
     fetchLocation();
     _initSpeechRecognizer();
-
+    // Initialize child categories with a default category ID
+    _onItemTapped('1'); // Fetch child categories for default ID
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 500),
@@ -391,6 +408,7 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
   @override
   void dispose() {
     _animationController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -415,14 +433,19 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
             return const Center(child: Text("No categories available"));
           }
 
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            setState(() {
+              _categoryList = snapshot.data!;
+            });
+          });
+
           final category = snapshot.data!;
 
           return Stack(
             children: [
               Column(
                 children: [
-                  Header(location ??
-                      LocationModel(main: "Loading...", detail: "", landmark: "")),
+                  Header(location ?? LocationModel(main: "Loading...", detail: "", landmark: "")),
 
                   // Search Bar Row
                   Padding(
@@ -495,22 +518,17 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
                                   margin: const EdgeInsets.symmetric(horizontal: 8),
                                 ),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                   decoration: BoxDecoration(
                                     color: Colors.grey[200],
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Row(
                                     children: const [
-                                      Icon(Icons.filter_list,
-                                          color: Colors.grey, size: 18),
+                                      Icon(Icons.filter_list, color: Colors.grey, size: 18),
                                       SizedBox(width: 4),
-                                      Text('Filters',
-                                          style: TextStyle(
-                                              color: Colors.grey, fontSize: 12)),
-                                      Icon(Icons.keyboard_arrow_down,
-                                          color: Colors.grey, size: 18),
+                                      Text('Filters', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                                      Icon(Icons.keyboard_arrow_down, color: Colors.grey, size: 18),
                                     ],
                                   ),
                                 ),
@@ -541,14 +559,14 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
                             ),
                             child: Center(
                               child: _selectedLanguage == 'English'
-                                  ? Image.asset('assets/icons/english.png',
-                                  width: 24, height: 24)
+                                  ? Image.asset('assets/icons/english.png', width: 24, height: 24)
                                   : const Text(
                                 'अ',
                                 style: TextStyle(
-                                    color: Colors.black,
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold),
+                                  color: Colors.black,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                           ),
@@ -571,8 +589,7 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
                           height: 160,
                           child: Center(child: Text("Failed to load banners")),
                         );
-                      } else if (!sliderSnapshot.hasData ||
-                          sliderSnapshot.data!.isEmpty) {
+                      } else if (!sliderSnapshot.hasData || sliderSnapshot.data!.isEmpty) {
                         return const SizedBox(
                           height: 160,
                           child: Center(child: Text("No banners available")),
@@ -584,21 +601,22 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
                     },
                   ),
 
-                  // Category Grid
+                  // Child Category Grid
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
-                      child: GridView.builder(
-                        gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      child: _childcategory.isEmpty
+                          ? const Center(child: Text("Select a category to view subcategories"))
+                          : GridView.builder(
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 3,
                           crossAxisSpacing: 16.0,
                           mainAxisSpacing: 16.0,
                           childAspectRatio: 0.8,
                         ),
-                        itemCount: category.length,
+                        itemCount: _childcategory.length,
                         itemBuilder: (context, index) {
-                          final item = category[index];
+                          final item = _childcategory[index];
                           return _buildCategoryCard(context, item);
                         },
                       ),
@@ -629,21 +647,27 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
                       children: [
                         const SizedBox(width: 20),
                         _buildBottomNavIcon(
-                          iconPath: 'assets/icons/shopping.png',
-                          label: 'Dell',
+                          key: _settingsIconKey,
+                          iconPath: _isSettingsActive ? 'assets/icons/product.png' : 'assets/icons/service.png',
+                          label: _isSettingsActive ? 'Service' : 'Product',
                           index: 0,
-                          onTap: () => _loadCategory("1"),
+                          onTap: () => _showSettingsDialog(context),
                         ),
                         const SizedBox(width: 20),
-                        _buildBottomNavIcon(
-                          iconPath: 'assets/icons/shopping.png',
-                          label: 'HP',
-                          index: 1,
-                          onTap: () => _loadCategory("2"),
-                        ),
+                        ...category.take(4).expand((item) => [
+                          _buildBottomNavIcon(
+                            iconPath: 'assets/icons/shopping.png',
+                            label: item.categoryName,
+                            index: category.indexWhere((element) => element.id == item.id) + 1,
+                            onTap: () => _onItemTapped(item.id.toString()),
+                          ),
+                          const SizedBox(width: 20),
+                        ]).toList()
+                          ..removeLast(),
                       ],
                     ),
                   ),
@@ -667,23 +691,20 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      Image.asset('assets/icons/profile_placeholder.png',
-                          width: 50, height: 50),
+                      Image.asset('assets/icons/profile_placeholder.png', width: 50, height: 50),
                       GestureDetector(
                         onTap: _toggleVideoIconPosition,
                         child: Stack(
                           alignment: Alignment.center,
                           children: [
-                            Image.asset('assets/icons/toggle.png',
-                                width: 90, height: 60),
+                            Image.asset('assets/icons/toggle.png', width: 90, height: 60),
                             AnimatedPositioned(
                               duration: const Duration(milliseconds: 300),
                               curve: Curves.easeInOut,
                               top: 0,
                               left: _isToggleRight ? null : 0,
                               right: _isToggleRight ? 0 : null,
-                              child: Image.asset('assets/icons/video_icon.png',
-                                  width: 50, height: 63),
+                              child: Image.asset('assets/icons/video_icon.png', width: 50, height: 63),
                             ),
                           ],
                         ),
@@ -692,8 +713,7 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
                         onTap: () {
                           print('Box icon tapped');
                         },
-                        child: Image.asset('assets/icons/box.png',
-                            width: 50, height: 50),
+                        child: Image.asset('assets/icons/box.png', width: 50, height: 50),
                       ),
                     ],
                   ),
@@ -706,12 +726,9 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
     );
   }
 
-
   Widget Header(LocationModel location) {
     Future<void> openWhatsApp() async {
-      // This will just open WhatsApp app (no specific chat)
       final Uri whatsappUrl = Uri.parse("https://wa.me/");
-
       if (!await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication)) {
         throw Exception('Could not open WhatsApp');
       }
@@ -722,10 +739,7 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF00B3A7),
-            Color(0xFF008D80),
-          ],
+          colors: [Color(0xFF00B3A7), Color(0xFF008D80)],
         ),
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(35),
@@ -739,7 +753,6 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Location Info
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -777,8 +790,6 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
                   ],
                 ),
               ),
-
-              // WhatsApp Icon
               GestureDetector(
                 onTap: openWhatsApp,
                 child: Container(
@@ -824,8 +835,9 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
                 decoration: BoxDecoration(
                   color: Colors.black.withOpacity(0.4),
                   borderRadius: const BorderRadius.only(
-                      bottomLeft: Radius.circular(10),
-                      bottomRight: Radius.circular(10)),
+                    bottomLeft: Radius.circular(10),
+                    bottomRight: Radius.circular(10),
+                  ),
                 ),
               ),
             ),
@@ -835,7 +847,7 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
     );
   }
 
-  Widget _buildCategoryCard(BuildContext context, ProductCategoryModel item) {
+  Widget _buildCategoryCard(BuildContext context, CategoryModel item) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -861,14 +873,12 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
           children: [
             Expanded(
               child: ClipRRect(
-                borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(10)),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
                 child: Image.network(
                   item.categoryImg,
                   fit: BoxFit.cover,
                   width: double.infinity,
-                  errorBuilder: (context, error, stackTrace) =>
-                  const Icon(Icons.broken_image),
+                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image),
                 ),
               ),
             ),
@@ -876,8 +886,7 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
               padding: const EdgeInsets.all(8.0),
               child: Text(
                 item.categoryName,
-                style:
-                const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
           ],
@@ -887,19 +896,18 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
   }
 
   Widget _buildBottomNavIcon({
-    Key? key, // Added Key parameter
+    Key? key,
     required String iconPath,
     required String label,
     required int index,
     required VoidCallback onTap,
   }) {
-    final Color borderColor = (_selectedIndex == index && index == 0)
-        ? Colors.green // Green border for selected Settings icon
-        : const Color(
-        0xFF00B3A7); // Original teal for others or unselected Settings
+    final Color borderColor = (_selectedIndex == index)
+        ? Colors.green
+        : const Color(0xFF00B3A7);
 
     return GestureDetector(
-      key: key, // Assign the key here
+      key: key,
       onTap: onTap,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -910,7 +918,7 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: borderColor, // Use the dynamic border color
+                color: borderColor,
                 width: 2,
               ),
             ),
@@ -919,8 +927,6 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
                 iconPath,
                 width: 30,
                 height: 30,
-                // No 'color' property here, as per your original code and the desire for no other changes,
-                // assuming your 'settings.png' is already black.
               ),
             ),
           ),

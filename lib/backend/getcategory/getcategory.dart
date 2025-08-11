@@ -3,8 +3,8 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import './categoryModel.dart';
 
-class Getcategory {
-  static Future<List<CategoryModel>> getcategorydetails(String categoryType) async {
+class GetChildCategory {
+  static Future<List<CategoryModel>> getchildcategorydetails(String categoryType) async {
     final url = Uri.parse("https://flippraa.anklegaming.live/APIs/APIs.asmx/ShowChildCategory");
 
     final response = await http.post(
