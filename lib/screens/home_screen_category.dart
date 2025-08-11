@@ -126,7 +126,7 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
     print('Attempting to show language selection dialog...');
 
     final RenderBox? renderBox =
-        _languageIconKey.currentContext?.findRenderObject() as RenderBox?;
+    _languageIconKey.currentContext?.findRenderObject() as RenderBox?;
 
     if (renderBox == null) {
       print('ERROR: Language icon RenderBox not found.');
@@ -241,7 +241,7 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
 
   void _showSettingsDialog(BuildContext context) {
     final RenderBox? renderBox =
-        _settingsIconKey.currentContext?.findRenderObject() as RenderBox?;
+    _settingsIconKey.currentContext?.findRenderObject() as RenderBox?;
     if (renderBox == null) {
       print('ERROR: Product icon RenderBox not found.');
       return;
@@ -293,7 +293,7 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
                             // This setState is crucial for updating the main widget
                             setState(() {
                               _isSettingsActive =
-                                  !_isSettingsActive; // Toggle the state
+                              !_isSettingsActive; // Toggle the state
                               _category = Getcategory.getcategorydetails(
                                   _isSettingsActive ? 'Service' : 'Product');
                             });
@@ -348,7 +348,7 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
         width: 40,
         height: 40,
         errorBuilder: (context, error, stackTrace) =>
-            const Icon(Icons.error, size: 40, color: Colors.red),
+        const Icon(Icons.error, size: 40, color: Colors.red),
       ),
       onTap: onTap,
     );
@@ -359,7 +359,7 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
 
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (context) => const GetOtpScreen()),
-      (Route<dynamic> route) => false,
+          (Route<dynamic> route) => false,
     );
   }
 
@@ -404,386 +404,308 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        body: FutureBuilder<List<ProductCategoryModel>>(
-            future: _category,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              } else if (snapshot.hasError) {
-                return Center(child: Text("Error: ${snapshot.error}"));
-              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return const Center(child: Text("No categories available"));
-              }
-              final category = snapshot.data!;
+      body: FutureBuilder<List<ProductCategoryModel>>(
+        future: _category,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text("Error: ${snapshot.error}"));
+          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(child: Text("No categories available"));
+          }
 
-              return Stack(
+          final category = snapshot.data!;
+
+          return Stack(
+            children: [
+              Column(
                 children: [
-                  Column(
-                    children: [
-                      Header(location ??
-                          LocationModel(
-                              main: "Loading...", detail: "", landmark: "")),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16.0, vertical: 10.0),
-                        child: Row(
+                  Header(location ??
+                      LocationModel(main: "Loading...", detail: "", landmark: "")),
+
+                  // Search Bar Row
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+                    child: Row(
+                      children: [
+                        Stack(
+                          alignment: Alignment.center,
                           children: [
-                            Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                Image.asset(
-                                  'assets/icons/man.png',
-                                  width: 34,
-                                  height: 34,
-                                  fit: BoxFit.contain,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return const Icon(Icons.error,
-                                        color: Colors.purple, size: 34);
-                                  },
-                                ),
-                              ],
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Container(
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.9),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.black),
-                                ),
-                                child: Row(
-                                  children: [
-                                    if (!_isSearching) // Conditional check for the search icon
-                                      const Padding(
-                                        padding: EdgeInsets.all(8.0),
-                                        child: Icon(Icons.search,
-                                            color: Colors.grey),
-                                      ),
-                                    Expanded(
-                                      child: TextField(
-                                        controller: _searchController,
-                                        onChanged: (text) {
-                                          setState(() {
-                                            _isSearching = text.isNotEmpty;
-                                          });
-                                        },
-                                        decoration: const InputDecoration(
-                                          hintText: 'Search',
-                                          border: InputBorder.none,
-                                          isDense: true,
-                                          contentPadding: EdgeInsets.zero,
-                                        ),
-                                        style: const TextStyle(fontSize: 14),
-                                      ),
-                                    ),
-                                    GestureDetector(
-                                      // onTap: _isListening ? _stopListening : _startListening,
-                                      onTap: () {
-                                        print(
-                                            'Mic icon tapped! _isListening was: $_isListening'); // Yeh line add karein
-                                        _isListening
-                                            ? _stopListening()
-                                            : _startListening();
-                                      },
-                                      child: ScaleTransition(
-                                        scale: _animation,
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(8.0),
-                                          child: Icon(
-                                            Icons.mic,
-                                            color: _isListening
-                                                ? Colors.blue
-                                                : Colors.grey,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    Container(
-                                      height: 24,
-                                      width: 1,
-                                      color: Colors.grey.shade300,
-                                      margin: const EdgeInsets.symmetric(
-                                          horizontal: 8),
-                                    ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: Colors.grey[200],
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Row(
-                                        children: const [
-                                          Icon(Icons.filter_list,
-                                              color: Colors.grey, size: 18),
-                                          SizedBox(width: 4),
-                                          Text('Filters',
-                                              style: TextStyle(
-                                                  color: Colors.grey,
-                                                  fontSize: 12)),
-                                          Icon(Icons.keyboard_arrow_down,
-                                              color: Colors.grey, size: 18),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            GestureDetector(
-                              key: _languageIconKey,
-                              onTap: () {
-                                print(
-                                    'Language toggle icon tapped! Attempting to show language selection dialog.');
-                                _showLanguageSelection(context);
-                              },
-                              child: Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: const Color(0xFF00B3A7),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.2),
-                                      spreadRadius: 1,
-                                      blurRadius: 3,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: Center(
-                                  child: _selectedLanguage == 'English'
-                                      ? Image.asset(
-                                          'assets/icons/english.png',
-                                          width: 24,
-                                          height: 24,
-                                          errorBuilder:
-                                              (context, error, stackTrace) {
-                                            return const Icon(Icons.error,
-                                                color: Colors.red, size: 24);
-                                          },
-                                        )
-                                      : const Text(
-                                          'अ',
-                                          style: TextStyle(
-                                              color: Colors.black,
-                                              fontSize: 20,
-                                              fontWeight: FontWeight.bold),
-                                        ),
-                                ),
-                              ),
+                            Image.asset(
+                              'assets/icons/man.png',
+                              width: 34,
+                              height: 34,
+                              fit: BoxFit.contain,
                             ),
                           ],
                         ),
-                      ),
-
-                      FutureBuilder<List<SliderModel>>(
-                        future: _slider,
-                        builder: (context, sliderSnapshot) {
-                          if (sliderSnapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return const SizedBox(
-                              height: 160,
-                              child: Center(child: CircularProgressIndicator()),
-                            );
-                          } else if (sliderSnapshot.hasError) {
-                            return const SizedBox(
-                              height: 160,
-                              child:
-                                  Center(child: Text("Failed to load banners")),
-                            );
-                          } else if (!sliderSnapshot.hasData ||
-                              sliderSnapshot.data!.isEmpty) {
-                            return const SizedBox(
-                              height: 160,
-                              child:
-                                  Center(child: Text("No banners available")),
-                            );
-                          }
-
-                          final sliderItems = sliderSnapshot.data!;
-                          return _buildSliderCard(context, sliderItems);
-                        },
-                      ),
-
-                      // Grid of Cards
-                      Expanded(
-                          child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: GridView.builder(
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 3,
-                            crossAxisSpacing: 16.0,
-                            mainAxisSpacing: 16.0,
-                            childAspectRatio: 0.8,
-                          ),
-                          itemCount: category.length,
-                          itemBuilder: (context, index) {
-                            final item = category[index];
-                            return _buildCategoryCard(context, item);
-                          },
-                        ),
-                      )),
-
-                      const SizedBox(height: 150),
-                    ],
-                  ),
-                  Positioned(
-                    bottom: 70,
-                    left: 0,
-                    right: 0,
-                    child: Container(
-                      height: 80,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            spreadRadius: 2,
-                            blurRadius: 5,
-                            offset: const Offset(0, -3),
-                          ),
-                        ],
-                      ),
-                      child: SingleChildScrollView(
-                        // Added for horizontal scrolling if needed
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          children: [
-                            const SizedBox(width: 20),
-                            _buildBottomNavIcon(
-                              key: _settingsIconKey,
-                              iconPath: _isSettingsActive
-                                  ? 'assets/icons/product.png'
-                                  : 'assets/icons/service.png',
-                              label: _isSettingsActive ? 'Product' : 'Service',
-                              index: 0,
-                              onTap: () => _showSettingsDialog(context),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Container(
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.9),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.black),
                             ),
-
-                            const SizedBox(width: 20), // Space after first icon
-
-                            // Dynamic icons from API data
-                            ...category
-                                .take(4)
-                                .expand((item) => [
-                                      _buildBottomNavIcon(
-                                        iconPath: 'assets/icons/shopping.png',
-                                        label: item.categoryName,
-                                        index: category.indexOf(item) + 1,
-                                        onTap: () => _onItemTapped(
-                                            category.indexOf(item) + 1),
-                                      ),
-                                      const SizedBox(width: 20),
-                                      // Space after each icon
-                                    ])
-                                .toList()
-                              ..removeLast(), // Remove last space
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.only(bottom: 10.0),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF00B3A7),
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(20),
-                          topRight: Radius.circular(20),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          // User Icon
-                          Image.asset(
-                            'assets/icons/profile_placeholder.png',
-                            width: 50,
-                            height: 50,
-                            fit: BoxFit.contain,
-                            errorBuilder: (context, error, stackTrace) {
-                              return const Icon(Icons.error,
-                                  color: Colors.red, size: 50);
-                            },
-                          ),
-                          // Toggle Icon with Video Icon - NOW CLICKABLE AND ANIMATED
-                          GestureDetector(
-                            onTap: _toggleVideoIconPosition,
-                            // Call the new toggle function
-                            child: Stack(
-                              alignment: Alignment.center,
+                            child: Row(
                               children: [
-                                Image.asset(
-                                  'assets/icons/toggle.png',
-                                  width: 90,
-                                  height: 60,
-                                  fit: BoxFit.contain,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return const Icon(Icons.error,
-                                        color: Colors.red, size: 60);
-                                  },
-                                ),
-                                AnimatedPositioned(
-                                  // Use AnimatedPositioned for smooth transition
-                                  duration: const Duration(milliseconds: 300),
-                                  // Animation duration
-                                  curve: Curves.easeInOut,
-                                  // Smooth animation curve
-                                  top: 0,
-                                  // Adjust left/right based on _isToggleRight
-                                  left: _isToggleRight ? null : 0,
-                                  // When false, stick to left
-                                  right: _isToggleRight ? 0 : null,
-                                  // When true, stick to right
-                                  child: Image.asset(
-                                    'assets/icons/video_icon.png',
-                                    width: 50,
-                                    height: 63,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return const Icon(Icons.videocam,
-                                          color: Colors.red, size: 20);
+                                if (!_isSearching)
+                                  const Padding(
+                                    padding: EdgeInsets.all(8.0),
+                                    child: Icon(Icons.search, color: Colors.grey),
+                                  ),
+                                Expanded(
+                                  child: TextField(
+                                    controller: _searchController,
+                                    onChanged: (text) {
+                                      setState(() {
+                                        _isSearching = text.isNotEmpty;
+                                      });
                                     },
+                                    decoration: const InputDecoration(
+                                      hintText: 'Search',
+                                      border: InputBorder.none,
+                                      isDense: true,
+                                      contentPadding: EdgeInsets.zero,
+                                    ),
+                                    style: const TextStyle(fontSize: 14),
+                                  ),
+                                ),
+                                GestureDetector(
+                                  onTap: () {
+                                    _isListening ? _stopListening() : _startListening();
+                                  },
+                                  child: ScaleTransition(
+                                    scale: _animation,
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Icon(
+                                        Icons.mic,
+                                        color: _isListening ? Colors.blue : Colors.grey,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                Container(
+                                  height: 24,
+                                  width: 1,
+                                  color: Colors.grey.shade300,
+                                  margin: const EdgeInsets.symmetric(horizontal: 8),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[200],
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    children: const [
+                                      Icon(Icons.filter_list,
+                                          color: Colors.grey, size: 18),
+                                      SizedBox(width: 4),
+                                      Text('Filters',
+                                          style: TextStyle(
+                                              color: Colors.grey, fontSize: 12)),
+                                      Icon(Icons.keyboard_arrow_down,
+                                          color: Colors.grey, size: 18),
+                                    ],
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          // Box Icon (New addition)
-                          GestureDetector(
-                            onTap: () {
-                              print('Box icon tapped');
-                              // TODO: Implement box functionality
-                            },
-                            child: Image.asset(
-                              'assets/icons/box.png',
-                              width: 50,
-                              height: 50,
-                              fit: BoxFit.contain,
-                              errorBuilder: (context, error, stackTrace) {
-                                return const Icon(Icons.error,
-                                    color: Colors.red, size: 50);
-                              },
+                        ),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          key: _languageIconKey,
+                          onTap: () {
+                            _showLanguageSelection(context);
+                          },
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: const Color(0xFF00B3A7),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  spreadRadius: 1,
+                                  blurRadius: 3,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Center(
+                              child: _selectedLanguage == 'English'
+                                  ? Image.asset('assets/icons/english.png',
+                                  width: 24, height: 24)
+                                  : const Text(
+                                'अ',
+                                style: TextStyle(
+                                    color: Colors.black,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold),
+                              ),
                             ),
                           ),
-                        ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Slider
+                  FutureBuilder<List<SliderModel>>(
+                    future: _slider,
+                    builder: (context, sliderSnapshot) {
+                      if (sliderSnapshot.connectionState == ConnectionState.waiting) {
+                        return const SizedBox(
+                          height: 160,
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      } else if (sliderSnapshot.hasError) {
+                        return const SizedBox(
+                          height: 160,
+                          child: Center(child: Text("Failed to load banners")),
+                        );
+                      } else if (!sliderSnapshot.hasData ||
+                          sliderSnapshot.data!.isEmpty) {
+                        return const SizedBox(
+                          height: 160,
+                          child: Center(child: Text("No banners available")),
+                        );
+                      }
+
+                      final sliderItems = sliderSnapshot.data!;
+                      return _buildSliderCard(context, sliderItems);
+                    },
+                  ),
+
+                  // Category Grid
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: GridView.builder(
+                        gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 16.0,
+                          mainAxisSpacing: 16.0,
+                          childAspectRatio: 0.8,
+                        ),
+                        itemCount: category.length,
+                        itemBuilder: (context, index) {
+                          final item = category[index];
+                          return _buildCategoryCard(context, item);
+                        },
                       ),
                     ),
                   ),
+                  const SizedBox(height: 150),
                 ],
-              );
-            }));
+              ),
+
+              // Bottom Category Navigation
+              Positioned(
+                bottom: 70,
+                left: 0,
+                right: 0,
+                child: Container(
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        spreadRadius: 2,
+                        blurRadius: 5,
+                        offset: const Offset(0, -3),
+                      ),
+                    ],
+                  ),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        const SizedBox(width: 20),
+                        _buildBottomNavIcon(
+                          iconPath: 'assets/icons/shopping.png',
+                          label: 'Dell',
+                          index: 0,
+                          onTap: () => _loadCategory("1"),
+                        ),
+                        const SizedBox(width: 20),
+                        _buildBottomNavIcon(
+                          iconPath: 'assets/icons/shopping.png',
+                          label: 'HP',
+                          index: 1,
+                          onTap: () => _loadCategory("2"),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // Bottom Fixed Bar
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.only(bottom: 10.0),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF00B3A7),
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      Image.asset('assets/icons/profile_placeholder.png',
+                          width: 50, height: 50),
+                      GestureDetector(
+                        onTap: _toggleVideoIconPosition,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Image.asset('assets/icons/toggle.png',
+                                width: 90, height: 60),
+                            AnimatedPositioned(
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOut,
+                              top: 0,
+                              left: _isToggleRight ? null : 0,
+                              right: _isToggleRight ? 0 : null,
+                              child: Image.asset('assets/icons/video_icon.png',
+                                  width: 50, height: 63),
+                            ),
+                          ],
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          print('Box icon tapped');
+                        },
+                        child: Image.asset('assets/icons/box.png',
+                            width: 50, height: 50),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
+
 
   Widget Header(LocationModel location) {
     Future<void> openWhatsApp() async {
@@ -940,13 +862,13 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
             Expanded(
               child: ClipRRect(
                 borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(10)),
+                const BorderRadius.vertical(top: Radius.circular(10)),
                 child: Image.network(
                   item.categoryImg,
                   fit: BoxFit.cover,
                   width: double.infinity,
                   errorBuilder: (context, error, stackTrace) =>
-                      const Icon(Icons.broken_image),
+                  const Icon(Icons.broken_image),
                 ),
               ),
             ),
@@ -955,7 +877,7 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
               child: Text(
                 item.categoryName,
                 style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
           ],
@@ -974,7 +896,7 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
     final Color borderColor = (_selectedIndex == index && index == 0)
         ? Colors.green // Green border for selected Settings icon
         : const Color(
-            0xFF00B3A7); // Original teal for others or unselected Settings
+        0xFF00B3A7); // Original teal for others or unselected Settings
 
     return GestureDetector(
       key: key, // Assign the key here
