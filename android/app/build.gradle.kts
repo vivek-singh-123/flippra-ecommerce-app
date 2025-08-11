@@ -6,14 +6,16 @@ plugins {
 
 android {
     namespace = "com.example.flippra"
-    compileSdk = flutter.compileSdkVersion
+    // Update both compileSdk and targetSdk to 35
+    compileSdk = 35
 
-    ndkVersion = "27.0.12077973" // Keep this
+    ndkVersion = "27.0.12077973"
 
     defaultConfig {
         applicationId = "com.example.flippra"
         minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        // Update targetSdk to 35
+        targetSdk = 35
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
@@ -29,7 +31,7 @@ android {
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("debug") // replace with release config if available
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 }

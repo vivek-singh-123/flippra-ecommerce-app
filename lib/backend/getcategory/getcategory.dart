@@ -5,12 +5,14 @@ import './categoryModel.dart';
 
 class Getcategory {
   static Future<List<CategoryModel>> getcategorydetails() async {
-    final url = Uri.parse("https://flippraa.anklegaming.live/APIs/APIs.asmx/ShowCategory");
+    final url = Uri.parse("https://flippraa.anklegaming.live/APIs/APIs.asmx/ShowChildCategory");
 
     final response = await http.post(
       url,
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: {'token': "wvnwivnoweifnqinqfinefnq"},
+      body: {'token': "wvnwivnoweifnqinqfinefnq",
+             'CategoryType': "1"
+      },
     );
 
     print("Status code : ${response.statusCode}");

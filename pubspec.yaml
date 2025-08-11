@@ -23,7 +23,8 @@ dependencies:
   geocoding: ^2.1.0
   permission_handler: ^11.0.1
   google_fonts: ^6.1.0
-
+  flutter_speech: ^2.0.1
+  url_launcher: ^6.3.0
 
 
 dev_dependencies:
@@ -59,7 +60,7 @@ flutter:
     - assets/videos/Login_final.mp4
     - assets/videos/otp.mp4
     - assets/videos/world_map.mp4
-    - assets/icons/settings.png
+    - assets/icons/product.png
     - assets/icons/service.png
     - assets/icons/person.png
     - assets/icons/shopping.png

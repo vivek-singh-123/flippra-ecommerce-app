@@ -1,4 +1,4 @@
-import 'package:flippra/backend/getcategory/getcategory.dart';
+import 'package:flippra/backend/getcategory/getcategory.dart' hide Getcategory;
 import 'package:flippra/backend/getslider/getslider.dart';
 import 'package:flippra/backend/getslider/slidermodel.dart';
 import 'package:flippra/backend/getlocation/getlocation.dart';
@@ -6,107 +6,177 @@ import 'package:flutter/material.dart';
 import 'package:flippra/screens/shop_screen.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../backend/getcategory/ShowProductCategory.dart';
 import '../backend/getcategory/categoryModel.dart';
 import '../backend/getlocation/locationmodel.dart';
 import '../utils/shared_prefs_helper.dart';
 import 'get_otp_screen.dart';
+import 'package:flutter_speech/flutter_speech.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 
 class HomeScreenCategoryScreen extends StatefulWidget {
   const HomeScreenCategoryScreen({super.key});
 
   @override
-  State<HomeScreenCategoryScreen> createState() => _HomeScreenCategoryScreenState();
+  State<HomeScreenCategoryScreen> createState() =>
+      _HomeScreenCategoryScreenState();
 }
 
-class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
-  int _selectedIndex = 0; // For the bottom navigation bar
-  String _selectedLanguage = 'English'; // To keep track of the selected language
-  bool _isToggleRight = true; // Added for the video icon toggle position
-  late Future<List<CategoryModel>> _category;
+class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen>
+    with SingleTickerProviderStateMixin {
+  int _selectedIndex = 0;
+  String _selectedLanguage = 'English';
+  bool _isToggleRight = true;
+  bool _isSettingsActive = true;
+  bool _isSearching = false;
+  late Future<List<ProductCategoryModel>> _category;
   late Future<List<SliderModel>> _slider;
   LocationModel? location;
 
   final GlobalKey _languageIconKey = GlobalKey();
-  final GlobalKey _settingsIconKey = GlobalKey(); //
+  final GlobalKey _settingsIconKey = GlobalKey();
+
+  // Microphone functionality ke liye naye variables
+  final TextEditingController _searchController = TextEditingController();
+  late SpeechRecognition _speech;
+  bool _isListening = false;
+
+  // Naya aur behtar animation effect
+  late AnimationController _animationController;
+  late Animation<double> _animation;
+
+  void _initSpeechRecognizer() {
+    _speech = SpeechRecognition();
+
+    _speech.setAvailabilityHandler((bool result) {
+      if (!result) {
+        print("Speech recognition not available.");
+      }
+    });
+
+    _speech.setRecognitionStartedHandler(() {
+      setState(() {
+        _isListening = true;
+      });
+      _animationController.repeat(reverse: true);
+      print('✅ Listening started. _isListening is now: $_isListening');
+    });
+
+    _speech.setRecognitionResultHandler((String recognizedText) {
+      _searchController.text = recognizedText;
+    });
+
+    // Jab mic sunna band kare
+    _speech.setRecognitionCompleteHandler((String recognizedText) {
+      setState(() {
+        _isListening = false;
+      });
+      _animationController.stop();
+      print('❌ Listening complete. _isListening is now: $_isListening');
+    });
+
+    // Yeh naya handler add kiya hai
+    _speech.setErrorHandler(() {
+      setState(() {
+        _isListening = false;
+      });
+      _animationController.stop();
+      print(
+          '⚠️ Speech recognition error occurred. _isListening is now: $_isListening');
+    });
+  }
+
+  Future<bool> _requestPermission() async {
+    var status = await Permission.microphone.status;
+    if (status.isGranted) {
+      return true;
+    } else {
+      var result = await Permission.microphone.request();
+      return result.isGranted;
+    }
+  }
+
+  void _startListening() async {
+    bool hasPermission = await _requestPermission();
+    if (hasPermission) {
+      _speech.activate('en_US').then((_) {
+        _speech.listen();
+      });
+    } else {
+      print("Microphone permission denied.");
+    }
+  }
+
+  void _stopListening() {
+    _speech.stop();
+  }
 
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
     print('Selected bottom nav item: $index');
-    if (index == 0) { // If Settings icon is tapped
-      _showSettingsDialog(context); // Call the new settings dialog
+    if (index == 0) {
+      _showSettingsDialog(context);
     }
   }
 
   void _showLanguageSelection(BuildContext context) {
     print('Attempting to show language selection dialog...');
 
-    final RenderBox? renderBox = _languageIconKey.currentContext?.findRenderObject() as RenderBox?;
+    final RenderBox? renderBox =
+        _languageIconKey.currentContext?.findRenderObject() as RenderBox?;
 
     if (renderBox == null) {
       print('ERROR: Language icon RenderBox not found.');
-      return; // Cannot show dialog without render box
+      return;
     }
 
-    final Offset offset = renderBox.localToGlobal(Offset.zero); // Global position of the top-left corner of the icon
-    final Size size = renderBox.size; // Size of the icon
+    final Offset offset = renderBox.localToGlobal(Offset.zero);
+    final Size size = renderBox.size;
 
-    // Get screen dimensions
     final double screenWidth = MediaQuery.of(context).size.width;
     final double screenHeight = MediaQuery.of(context).size.height;
 
-    // Approximate width and height for the dialog content (single List Tile)
-    const double dialogContentWidth = 150.0; // This should be enough for "Hindi" / "English" + icon
-    const double dialogContentHeight = 56.0; // Approx default ListTile height
+    const double dialogContentWidth = 150.0;
+    const double dialogContentHeight = 56.0;
 
-    // Calculate desired left position: Align the right edge of the dialog with the right edge of the icon.
-    // So, dialog's left = icon's global right edge - dialog's width
     double dialogLeft = offset.dx + size.width - dialogContentWidth;
 
-    // Add a small horizontal padding to keep it off the screen edge
     const double horizontalPadding = 8.0;
 
-    // Adjust if it goes off the left edge
     if (dialogLeft < horizontalPadding) {
       dialogLeft = horizontalPadding;
     }
-    // Adjust if it goes off the right edge (this logic is crucial for right-aligned items)
-    // The dialog should not extend beyond screenWidth - horizontalPadding
     if (dialogLeft + dialogContentWidth > screenWidth - horizontalPadding) {
       dialogLeft = screenWidth - dialogContentWidth - horizontalPadding;
     }
 
-    // Calculate desired top position: Slightly below the icon
-    double dialogTop = offset.dy + size.height + 8.0; // 8.0 is a small margin below the icon
+    double dialogTop = offset.dy + size.height + 8.0;
 
-    // Adjust if it goes off the bottom edge (considering the bottom navigation bar)
-    const double bottomNavHeight = 100.0; // Estimate space occupied by bottom nav bar
+    const double bottomNavHeight = 100.0;
     if (dialogTop + dialogContentHeight > screenHeight - bottomNavHeight) {
-      // If it overflows at the bottom, try to place it above the icon
-      dialogTop = offset.dy - dialogContentHeight - 8.0; // 8.0 is a small margin above the icon
-      // Fallback: if placing above still overflows (e.g., at top of screen),
-      // just ensure it doesn't go off the very top.
+      dialogTop = offset.dy - dialogContentHeight - 8.0;
       if (dialogTop < MediaQuery.of(context).padding.top + 8.0) {
         dialogTop = MediaQuery.of(context).padding.top + 8.0;
       }
     }
 
-    // Determine the language option to show in the dialog (the opposite of current)
     String optionLanguage;
-    Widget optionDisplayWidget; // Can be Text or Image
+    Widget optionDisplayWidget;
 
     if (_selectedLanguage == 'English') {
       optionLanguage = 'Hindi';
       optionDisplayWidget = const Text(
         'अ',
-        style: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
+        style: TextStyle(
+            color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
       );
-    } else { // Current language is Hindi
+    } else {
       optionLanguage = 'English';
       optionDisplayWidget = Image.asset(
-        'assets/icons/english.png', // Assuming you have an English icon
+        'assets/icons/english.png',
         width: 24,
         height: 24,
         errorBuilder: (context, error, stackTrace) {
@@ -122,29 +192,30 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
       barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
       barrierColor: Colors.black.withOpacity(0.1),
       transitionDuration: const Duration(milliseconds: 200),
-      pageBuilder: (BuildContext buildContext, Animation<double> animation, Animation<double> secondaryAnimation) {
+      pageBuilder: (BuildContext buildContext, Animation<double> animation,
+          Animation<double> secondaryAnimation) {
         return Align(
           alignment: Alignment.topLeft,
           child: Transform.translate(
-            offset: Offset(dialogLeft, dialogTop), // Use dialogLeft and dialogTop directly
+            offset: Offset(dialogLeft, dialogTop),
             child: Material(
               color: Colors.white,
               elevation: 4.0,
               borderRadius: BorderRadius.circular(8.0),
-              child: SizedBox( // Use SizedBox with explicit dimensions for predictable layout
+              child: SizedBox(
                 width: dialogContentWidth,
                 height: dialogContentHeight,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
                     ListTile(
-                      leading: optionDisplayWidget, // Dynamically show 'अ' or English icon
-                      title: Text(optionLanguage), // Display the name of the language to switch to
+                      leading: optionDisplayWidget,
+                      title: Text(optionLanguage),
                       onTap: () {
                         setState(() {
-                          _selectedLanguage = optionLanguage; // Toggle language
+                          _selectedLanguage = optionLanguage;
                         });
-                        Navigator.pop(context); // Close the dialog
+                        Navigator.pop(context);
                         print('Language set to $_selectedLanguage');
                       },
                     ),
@@ -160,7 +231,7 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
           opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
           child: ScaleTransition(
             scale: CurvedAnimation(parent: animation, curve: Curves.easeOut),
-            alignment: Alignment.topRight, // Scale from the top-right for better visual
+            alignment: Alignment.topRight,
             child: child,
           ),
         );
@@ -169,11 +240,10 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
   }
 
   void _showSettingsDialog(BuildContext context) {
-    bool isServiceSelected = true; // Initial state
-
-    final RenderBox? renderBox = _settingsIconKey.currentContext?.findRenderObject() as RenderBox?;
+    final RenderBox? renderBox =
+        _settingsIconKey.currentContext?.findRenderObject() as RenderBox?;
     if (renderBox == null) {
-      print('ERROR: Settings icon RenderBox not found.');
+      print('ERROR: Product icon RenderBox not found.');
       return;
     }
 
@@ -181,7 +251,7 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
     final Size size = renderBox.size;
 
     final double screenWidth = MediaQuery.of(context).size.width;
-    const double dialogContentWidth = 90.0;
+    const double dialogContentWidth = 60.0;
     const double dialogContentHeight = 60.0;
     const double padding = 8.0;
 
@@ -202,57 +272,61 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
         opaque: false,
         barrierDismissible: true,
         pageBuilder: (context, animation, secondaryAnimation) {
-          return StatefulBuilder(
-            builder: (context, setState) {
-              return GestureDetector(
-                onTap: () => Navigator.of(context).pop(),
-                child: Scaffold(
-                  backgroundColor: Colors.black.withOpacity(0.1),
-                  body: Stack(
-                    children: [
-                      Positioned(
-                        top: dialogTop,
-                        left: dialogLeft,
-                        child: ScaleTransition(
-                          scale: CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
-                          child: Material(
-                            color: Colors.white,
-                            elevation: 8.0,
-                            borderRadius: BorderRadius.circular(12.0),
-                            child: InkWell(
-                              onTap: () {
-                                setState(() {
-                                  isServiceSelected = !isServiceSelected;
-                                });
-                              },
-                              child: SizedBox(
-                                width: dialogContentWidth,
-                                height: dialogContentHeight,
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Image.asset(
-                                      'assets/icons/service.png',
-                                      width: 30,
-                                      height: 30,
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      isServiceSelected ? 'Service' : 'Settings',
-                                      style: const TextStyle(fontSize: 12),
-                                    ),
-                                  ],
+          return GestureDetector(
+            onTap: () => Navigator.of(context).pop(),
+            child: Scaffold(
+              backgroundColor: Colors.black.withOpacity(0.1),
+              body: Stack(
+                children: [
+                  Positioned(
+                    top: dialogTop,
+                    left: dialogLeft,
+                    child: ScaleTransition(
+                      scale: CurvedAnimation(
+                          parent: animation, curve: Curves.easeOutBack),
+                      child: Material(
+                        color: Colors.white,
+                        elevation: 8.0,
+                        borderRadius: BorderRadius.circular(12.0),
+                        child: InkWell(
+                          onTap: () {
+                            // This setState is crucial for updating the main widget
+                            setState(() {
+                              _isSettingsActive =
+                                  !_isSettingsActive; // Toggle the state
+                              _category = Getcategory.getcategorydetails(
+                                  _isSettingsActive ? 'Service' : 'Product');
+                            });
+                            Navigator.of(context).pop();
+                          },
+                          child: SizedBox(
+                            width: dialogContentWidth,
+                            height: dialogContentHeight,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Image.asset(
+                                  _isSettingsActive
+                                      ? 'assets/icons/service.png'
+                                      : 'assets/icons/product.png',
+                                  width: 30,
+                                  height: 30,
                                 ),
-                              ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _isSettingsActive ? 'Service' : 'Product',
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ],
                             ),
                           ),
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              );
-            },
+                ],
+              ),
+            ),
           );
         },
         transitionDuration: const Duration(milliseconds: 300),
@@ -266,47 +340,58 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
     );
   }
 
-  Widget _buildDialogOption(BuildContext context, String iconPath, VoidCallback onTap) {
+  Widget _buildDialogOption(
+      BuildContext context, String iconPath, VoidCallback onTap) {
     return ListTile(
       leading: Image.asset(
         iconPath,
         width: 40,
         height: 40,
         errorBuilder: (context, error, stackTrace) =>
-        const Icon(Icons.error, size: 40, color: Colors.red),
+            const Icon(Icons.error, size: 40, color: Colors.red),
       ),
       onTap: onTap,
     );
   }
 
   Future<void> logoutUser(BuildContext context) async {
-    await SharedPrefsHelper.clearUserData(); // Clear shared preferences
+    await SharedPrefsHelper.clearUserData();
 
-    // Navigate to GetOtpScreen and remove all previous routes
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (context) => const GetOtpScreen()),
-          (Route<dynamic> route) => false,
+      (Route<dynamic> route) => false,
     );
   }
 
-
-  // Function to toggle the video icon position
   void _toggleVideoIconPosition() {
     setState(() {
-      _isToggleRight = !_isToggleRight; // Toggle the boolean value
+      _isToggleRight = !_isToggleRight;
     });
     print('Video icon toggled to: ${_isToggleRight ? "Right" : "Left"}');
   }
 
-
-
-
   @override
   void initState() {
     super.initState();
-    _category = Getcategory.getcategorydetails();
+    _category = Getcategory.getcategorydetails(
+        _isSettingsActive ? 'Service' : 'Product');
     _slider = GetSlider.getslider();
     fetchLocation();
+    _initSpeechRecognizer();
+
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _animation = Tween<double>(begin: 1.0, end: 1.2).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   void fetchLocation() async {
@@ -319,16 +404,15 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        body: FutureBuilder<List<CategoryModel>>(
+        body: FutureBuilder<List<ProductCategoryModel>>(
             future: _category,
-            builder: (context, snapshot)
-            {
+            builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
               } else if (snapshot.hasError) {
                 return Center(child: Text("Error: ${snapshot.error}"));
               } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return const Center(child: Text("No tournaments available"));
+                return const Center(child: Text("No categories available"));
               }
               final category = snapshot.data!;
 
@@ -337,14 +421,13 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
                   Column(
                     children: [
                       Header(location ??
-                          LocationModel(main: "Loading...", detail: "", landmark: "")),
-                      // Search Bar Row (Includes the language toggle icon)
+                          LocationModel(
+                              main: "Loading...", detail: "", landmark: "")),
                       Padding(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16.0, vertical: 10.0),
                         child: Row(
                           children: [
-                            // New: Toggle and Man Images
                             Stack(
                               alignment: Alignment.center,
                               children: [
@@ -354,14 +437,13 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
                                   height: 34,
                                   fit: BoxFit.contain,
                                   errorBuilder: (context, error, stackTrace) {
-                                    return const Icon(Icons.error, color: Colors.purple, size: 34);
+                                    return const Icon(Icons.error,
+                                        color: Colors.purple, size: 34);
                                   },
                                 ),
                               ],
                             ),
-
                             const SizedBox(width: 8),
-
                             Expanded(
                               child: Container(
                                 height: 40,
@@ -372,31 +454,57 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
                                 ),
                                 child: Row(
                                   children: [
-                                    const Padding(
-                                      padding: EdgeInsets.all(8.0),
-                                      child: Icon(Icons.search, color: Colors.grey),
-                                    ),
-                                    const Expanded(
+                                    if (!_isSearching) // Conditional check for the search icon
+                                      const Padding(
+                                        padding: EdgeInsets.all(8.0),
+                                        child: Icon(Icons.search,
+                                            color: Colors.grey),
+                                      ),
+                                    Expanded(
                                       child: TextField(
-                                        decoration: InputDecoration(
+                                        controller: _searchController,
+                                        onChanged: (text) {
+                                          setState(() {
+                                            _isSearching = text.isNotEmpty;
+                                          });
+                                        },
+                                        decoration: const InputDecoration(
                                           hintText: 'Search',
                                           border: InputBorder.none,
                                           isDense: true,
                                           contentPadding: EdgeInsets.zero,
                                         ),
-                                        style: TextStyle(fontSize: 14),
+                                        style: const TextStyle(fontSize: 14),
                                       ),
                                     ),
-                                    const Padding(
-                                      padding: EdgeInsets.all(8.0),
-                                      child: Icon(Icons.mic, color: Colors.grey),
+                                    GestureDetector(
+                                      // onTap: _isListening ? _stopListening : _startListening,
+                                      onTap: () {
+                                        print(
+                                            'Mic icon tapped! _isListening was: $_isListening'); // Yeh line add karein
+                                        _isListening
+                                            ? _stopListening()
+                                            : _startListening();
+                                      },
+                                      child: ScaleTransition(
+                                        scale: _animation,
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child: Icon(
+                                            Icons.mic,
+                                            color: _isListening
+                                                ? Colors.blue
+                                                : Colors.grey,
+                                          ),
+                                        ),
+                                      ),
                                     ),
-                                    // Vertical Divider as a pipe "|"
                                     Container(
                                       height: 24,
                                       width: 1,
                                       color: Colors.grey.shade300,
-                                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                                      margin: const EdgeInsets.symmetric(
+                                          horizontal: 8),
                                     ),
                                     Container(
                                       padding: const EdgeInsets.symmetric(
@@ -407,11 +515,13 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
                                       ),
                                       child: Row(
                                         children: const [
-                                          Icon(Icons.filter_list, color: Colors.grey,
-                                              size: 18),
+                                          Icon(Icons.filter_list,
+                                              color: Colors.grey, size: 18),
                                           SizedBox(width: 4),
-                                          Text('Filters', style: TextStyle(
-                                              color: Colors.grey, fontSize: 12)),
+                                          Text('Filters',
+                                              style: TextStyle(
+                                                  color: Colors.grey,
+                                                  fontSize: 12)),
                                           Icon(Icons.keyboard_arrow_down,
                                               color: Colors.grey, size: 18),
                                         ],
@@ -421,23 +531,20 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
                                 ),
                               ),
                             ),
-
                             const SizedBox(width: 8),
-
                             GestureDetector(
-                              key: _languageIconKey, // Assign the GlobalKey here
+                              key: _languageIconKey,
                               onTap: () {
                                 print(
                                     'Language toggle icon tapped! Attempting to show language selection dialog.');
-                                _showLanguageSelection(
-                                    context); // Call the language selection dialog on tap
+                                _showLanguageSelection(context);
                               },
                               child: Container(
                                 width: 40,
                                 height: 40,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: const Color(0xFF00B3A7), // Teal color
+                                  color: const Color(0xFF00B3A7),
                                   boxShadow: [
                                     BoxShadow(
                                       color: Colors.black.withOpacity(0.2),
@@ -449,23 +556,23 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
                                 ),
                                 child: Center(
                                   child: _selectedLanguage == 'English'
-                                      ? Image
-                                      .asset( // Show English icon if current language is English
-                                    'assets/icons/english.png',
-                                    // Make sure this path is correct
-                                    width: 24,
-                                    height: 24,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return const Icon(
-                                          Icons.error, color: Colors.red, size: 24);
-                                    },
-                                  )
-                                      : const Text( // Show 'अ' if current language is Hindi
-                                    'अ',
-                                    style: TextStyle(color: Colors.black,
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold),
-                                  ),
+                                      ? Image.asset(
+                                          'assets/icons/english.png',
+                                          width: 24,
+                                          height: 24,
+                                          errorBuilder:
+                                              (context, error, stackTrace) {
+                                            return const Icon(Icons.error,
+                                                color: Colors.red, size: 24);
+                                          },
+                                        )
+                                      : const Text(
+                                          'अ',
+                                          style: TextStyle(
+                                              color: Colors.black,
+                                              fontSize: 20,
+                                              fontWeight: FontWeight.bold),
+                                        ),
                                 ),
                               ),
                             ),
@@ -473,11 +580,11 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
                         ),
                       ),
 
-                      // Banner Image
                       FutureBuilder<List<SliderModel>>(
                         future: _slider,
                         builder: (context, sliderSnapshot) {
-                          if (sliderSnapshot.connectionState == ConnectionState.waiting) {
+                          if (sliderSnapshot.connectionState ==
+                              ConnectionState.waiting) {
                             return const SizedBox(
                               height: 160,
                               child: Center(child: CircularProgressIndicator()),
@@ -485,12 +592,15 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
                           } else if (sliderSnapshot.hasError) {
                             return const SizedBox(
                               height: 160,
-                              child: Center(child: Text("Failed to load banners")),
+                              child:
+                                  Center(child: Text("Failed to load banners")),
                             );
-                          } else if (!sliderSnapshot.hasData || sliderSnapshot.data!.isEmpty) {
+                          } else if (!sliderSnapshot.hasData ||
+                              sliderSnapshot.data!.isEmpty) {
                             return const SizedBox(
                               height: 160,
-                              child: Center(child: Text("No banners available")),
+                              child:
+                                  Center(child: Text("No banners available")),
                             );
                           }
 
@@ -499,31 +609,29 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
                         },
                       ),
 
-
                       // Grid of Cards
                       Expanded(
                           child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: GridView.builder(
-                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 3,
-                                crossAxisSpacing: 16.0,
-                                mainAxisSpacing: 16.0,
-                                childAspectRatio: 0.8,
-                              ),
-                              itemCount: category.length,
-                              itemBuilder: (context, index) {
-                                final item = category[index];
-                                return _buildCategoryCard(context, item);
-                              },
-                            ),
-                          )
-                      ),
+                        padding: const EdgeInsets.all(16.0),
+                        child: GridView.builder(
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3,
+                            crossAxisSpacing: 16.0,
+                            mainAxisSpacing: 16.0,
+                            childAspectRatio: 0.8,
+                          ),
+                          itemCount: category.length,
+                          itemBuilder: (context, index) {
+                            final item = category[index];
+                            return _buildCategoryCard(context, item);
+                          },
+                        ),
+                      )),
 
                       const SizedBox(height: 150),
                     ],
                   ),
-
                   Positioned(
                     bottom: 70,
                     left: 0,
@@ -541,45 +649,46 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
                           ),
                         ],
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _buildBottomNavIcon(
-                            key: _settingsIconKey,
-                            iconPath: 'assets/icons/settings.png',
-                            label: 'Settings',
-                            index: 0,
-                            onTap: () => _showSettingsDialog(context),
-                          ),
-                          _buildBottomNavIcon(
-                            iconPath: 'assets/icons/person.png',
-                            label: 'Person',
-                            index: 1,
-                            onTap: () => _onItemTapped(1),
-                          ),
-                          _buildBottomNavIcon(
-                            iconPath: 'assets/icons/shopping.png',
-                            label: 'Shopping',
-                            index: 2,
-                            onTap: () => _onItemTapped(2),
-                          ),
-                          _buildBottomNavIcon(
-                            iconPath: 'assets/icons/cart.png',
-                            label: 'Cart',
-                            index: 3,
-                            onTap: () => _onItemTapped(3),
-                          ),
-                          _buildBottomNavIcon(
-                            iconPath: 'assets/icons/gallery.png',
-                            label: 'Gallery',
-                            index: 4,
-                            onTap: () => _onItemTapped(4),
-                          ),
-                        ],
+                      child: SingleChildScrollView(
+                        // Added for horizontal scrolling if needed
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          children: [
+                            const SizedBox(width: 20),
+                            _buildBottomNavIcon(
+                              key: _settingsIconKey,
+                              iconPath: _isSettingsActive
+                                  ? 'assets/icons/product.png'
+                                  : 'assets/icons/service.png',
+                              label: _isSettingsActive ? 'Product' : 'Service',
+                              index: 0,
+                              onTap: () => _showSettingsDialog(context),
+                            ),
+
+                            const SizedBox(width: 20), // Space after first icon
+
+                            // Dynamic icons from API data
+                            ...category
+                                .take(4)
+                                .expand((item) => [
+                                      _buildBottomNavIcon(
+                                        iconPath: 'assets/icons/shopping.png',
+                                        label: item.categoryName,
+                                        index: category.indexOf(item) + 1,
+                                        onTap: () => _onItemTapped(
+                                            category.indexOf(item) + 1),
+                                      ),
+                                      const SizedBox(width: 20),
+                                      // Space after each icon
+                                    ])
+                                .toList()
+                              ..removeLast(), // Remove last space
+                          ],
+                        ),
                       ),
                     ),
                   ),
-
                   Positioned(
                     bottom: 0,
                     left: 0,
@@ -604,8 +713,8 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
                             height: 50,
                             fit: BoxFit.contain,
                             errorBuilder: (context, error, stackTrace) {
-                              return const Icon(
-                                  Icons.error, color: Colors.red, size: 50);
+                              return const Icon(Icons.error,
+                                  color: Colors.red, size: 50);
                             },
                           ),
                           // Toggle Icon with Video Icon - NOW CLICKABLE AND ANIMATED
@@ -621,11 +730,12 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
                                   height: 60,
                                   fit: BoxFit.contain,
                                   errorBuilder: (context, error, stackTrace) {
-                                    return const Icon(
-                                        Icons.error, color: Colors.red, size: 60);
+                                    return const Icon(Icons.error,
+                                        color: Colors.red, size: 60);
                                   },
                                 ),
-                                AnimatedPositioned( // Use AnimatedPositioned for smooth transition
+                                AnimatedPositioned(
+                                  // Use AnimatedPositioned for smooth transition
                                   duration: const Duration(milliseconds: 300),
                                   // Animation duration
                                   curve: Curves.easeInOut,
@@ -641,8 +751,8 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
                                     width: 50,
                                     height: 63,
                                     errorBuilder: (context, error, stackTrace) {
-                                      return const Icon(
-                                          Icons.videocam, color: Colors.red, size: 20);
+                                      return const Icon(Icons.videocam,
+                                          color: Colors.red, size: 20);
                                     },
                                   ),
                                 ),
@@ -661,8 +771,8 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
                               height: 50,
                               fit: BoxFit.contain,
                               errorBuilder: (context, error, stackTrace) {
-                                return const Icon(
-                                    Icons.error, color: Colors.red, size: 50);
+                                return const Icon(Icons.error,
+                                    color: Colors.red, size: 50);
                               },
                             ),
                           ),
@@ -672,12 +782,19 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
                   ),
                 ],
               );
-            }
-        )
-    );
+            }));
   }
 
   Widget Header(LocationModel location) {
+    Future<void> openWhatsApp() async {
+      // This will just open WhatsApp app (no specific chat)
+      final Uri whatsappUrl = Uri.parse("https://wa.me/");
+
+      if (!await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication)) {
+        throw Exception('Could not open WhatsApp');
+      }
+    }
+
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -698,7 +815,7 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 17.0, vertical: 10.0),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween, // 👈 KEY LINE
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               // Location Info
               Expanded(
@@ -735,23 +852,13 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
-                    // If needed later:
-                    // Text(
-                    //   location.landmark,
-                    //   style: const TextStyle(
-                    //     color: Colors.white70,
-                    //     fontSize: 12,
-                    //   ),
-                    // ),
                   ],
                 ),
               ),
 
               // WhatsApp Icon
               GestureDetector(
-                onTap: () {
-                  // Your tap action here
-                },
+                onTap: openWhatsApp,
                 child: Container(
                   width: 40,
                   height: 40,
@@ -770,7 +877,6 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
       ),
     );
   }
-
 
   Widget _buildSliderCard(BuildContext context, List<SliderModel> sliderItems) {
     return SizedBox(
@@ -807,7 +913,7 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
     );
   }
 
-  Widget _buildCategoryCard(BuildContext context, CategoryModel item) {
+  Widget _buildCategoryCard(BuildContext context, ProductCategoryModel item) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -815,7 +921,7 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
           MaterialPageRoute(builder: (context) => const ShopScreen()),
         );
       },
-      child:Container(
+      child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(10),
@@ -833,12 +939,14 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
           children: [
             Expanded(
               child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(10)),
                 child: Image.network(
                   item.categoryImg,
                   fit: BoxFit.cover,
                   width: double.infinity,
-                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image),
+                  errorBuilder: (context, error, stackTrace) =>
+                      const Icon(Icons.broken_image),
                 ),
               ),
             ),
@@ -846,7 +954,8 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
               padding: const EdgeInsets.all(8.0),
               child: Text(
                 item.categoryName,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
           ],
@@ -864,7 +973,8 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
   }) {
     final Color borderColor = (_selectedIndex == index && index == 0)
         ? Colors.green // Green border for selected Settings icon
-        : const Color(0xFF00B3A7); // Original teal for others or unselected Settings
+        : const Color(
+            0xFF00B3A7); // Original teal for others or unselected Settings
 
     return GestureDetector(
       key: key, // Assign the key here
@@ -887,7 +997,7 @@ class _HomeScreenCategoryScreenState extends State<HomeScreenCategoryScreen> {
                 iconPath,
                 width: 30,
                 height: 30,
-                // No 'color' property here, as pe  r your original code and the desire for no other changes,
+                // No 'color' property here, as per your original code and the desire for no other changes,
                 // assuming your 'settings.png' is already black.
               ),
             ),
