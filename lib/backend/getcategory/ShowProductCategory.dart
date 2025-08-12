@@ -59,12 +59,14 @@ class ProductCategoryModel {
   factory ProductCategoryModel.fromJson(Map<String, dynamic> json) {
     return ProductCategoryModel(
       id: json['ID'] ?? 0,
-      categoryImg: json['CategoryImg'] != null &&
-          json['CategoryImg'].toString().startsWith("http")
-          ? json['CategoryImg']
-          : "https://flippraa.anklegaming.live/image/${json['CategoryImg'] ?? ''}",
+      categoryImg: json['CategoryImg'] ?? '',
       categoryName: json['CategoryName'] ?? '',
       categoryType: json['CategoryType'] ?? '',
     );
+  }
+
+  // Add this method to get full image URL:
+  String get fullImageUrl {
+    return "https://flippraa.anklegaming.live/image/$categoryImg";
   }
 }
