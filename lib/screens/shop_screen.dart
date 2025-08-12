@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flippra/screens/shop2_screen.dart'; // Import shop2_screen.dart
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 
 class ShopScreen extends StatefulWidget {
   const ShopScreen({super.key});
@@ -9,6 +13,83 @@ class ShopScreen extends StatefulWidget {
 }
 
 class _ShopScreenState extends State<ShopScreen> {
+  final MapController mapController = MapController();
+  Position? currentPosition;
+  String locationText1 = 'Fetching location...';
+  String locationText2 = '';
+  String locationText3 = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _getCurrentLocation();
+  }
+
+  Future<void> _getCurrentLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    // Check if location services are enabled
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      setState(() {
+        locationText1 = 'Location services disabled';
+      });
+      return;
+    }
+
+    // Check and request location permissions
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        setState(() {
+          locationText1 = 'Location permissions denied';
+        });
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      setState(() {
+        locationText1 = 'Location permissions permanently denied';
+      });
+      return;
+    }
+
+    // Fetch current position
+    try {
+      currentPosition = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      print('Current Position: ${currentPosition!.latitude}, ${currentPosition!.longitude}'); // Debug log
+
+      // Get placemark from coordinates
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        currentPosition!.latitude,
+        currentPosition!.longitude,
+      );
+      if (placemarks.isNotEmpty) {
+        Placemark place = placemarks[0];
+        setState(() {
+          locationText1 = '${place.locality ?? 'Unknown'} - ${place.postalCode ?? ''}';
+          locationText2 = place.subLocality ?? place.street ?? '';
+          locationText3 = 'Near ${place.name ?? place.thoroughfare ?? ''}';
+        });
+      } else {
+        setState(() {
+          locationText1 = 'No location data available';
+        });
+      }
+
+      // Update map to exact current location with higher zoom
+      mapController.move(LatLng(currentPosition!.latitude, currentPosition!.longitude), 16.0);
+    } catch (e) {
+      print('Error fetching location: $e'); // Debug log
+      setState(() {
+        locationText1 = 'Error fetching location';
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -22,19 +103,43 @@ class _ShopScreenState extends State<ShopScreen> {
                 color: Colors.grey[200], // Placeholder for map background
                 child: Stack(
                   children: [
-                    // Placeholder for the Map Image
+                    // FlutterMap with Geoapify tiles and marker
                     Positioned.fill(
-                      child: Image.asset(
-                        'assets/icons/map_placeholder.png', // Replace with your map image
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            color: Colors.blueGrey[100],
-                            child: const Center(
-                              child: Text('Map Image Missing', style: TextStyle(color: Colors.black54)),
-                            ),
-                          );
-                        },
+                      child: FlutterMap(
+                        mapController: mapController,
+                        options: MapOptions(
+                          initialCenter: const LatLng(0, 0),
+                          initialZoom: 2.0,
+                          onMapReady: () {
+                            if (currentPosition != null) {
+                              mapController.move(LatLng(currentPosition!.latitude, currentPosition!.longitude), 16.0);
+                            }
+                          },
+                        ),
+                        children: [
+                          TileLayer(
+                            urlTemplate: 'https://maps.geoapify.com/v1/tile/osm-carto/{z}/{x}/{y}.png?apiKey={apiKey}',
+                            additionalOptions: const {
+                              'apiKey': '2a411b50aafc4c1996eca70d594a314c', // Replace with your Geoapify API key
+                            },
+                          ),
+                          MarkerLayer(
+                            markers: currentPosition != null
+                                ? [
+                              Marker(
+                                point: LatLng(currentPosition!.latitude, currentPosition!.longitude),
+                                width: 40.0,
+                                height: 40.0,
+                                child: const Icon(
+                                  Icons.location_pin,
+                                  color: Colors.red,
+                                  size: 40,
+                                ),
+                              ),
+                            ]
+                                : [],
+                          ),
+                        ],
                       ),
                     ),
                     // Location and Filters Bar overlaying the map
@@ -76,18 +181,18 @@ class _ShopScreenState extends State<ShopScreen> {
                                   const SizedBox(width: 8),
                                   Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: const [
+                                    children: [
                                       Text(
-                                        'Delhi - 6',
-                                        style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                                        locationText1,
+                                        style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                                       ),
                                       Text(
-                                        'Sadar Bazar, Pahadi Dheeraj',
-                                        style: TextStyle(color: Colors.white70, fontSize: 12),
+                                        locationText2,
+                                        style: const TextStyle(color: Colors.white70, fontSize: 12),
                                       ),
                                       Text(
-                                        'Near Axis Bank',
-                                        style: TextStyle(color: Colors.white70, fontSize: 12),
+                                        locationText3,
+                                        style: const TextStyle(color: Colors.white70, fontSize: 12),
                                       ),
                                     ],
                                   ),
