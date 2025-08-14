@@ -68,6 +68,11 @@ flutter:
     - assets/icons/person.png
     - assets/icons/shopping.png
     - assets/icons/cart.png
+    - assets/icons/doctor.png
+    - assets/icons/home.png
+    - assets/icons/low.png
+    - assets/icons/parcel.png
+    - assets/icons/setting.png
     - assets/icons/gallery.png
     - assets/icons/top_frame.png
     - assets/icons/english.png

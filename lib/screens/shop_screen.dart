@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flippra/screens/shop2_screen.dart'; // Import shop2_screen.dart
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
@@ -13,11 +12,14 @@ class ShopScreen extends StatefulWidget {
 }
 
 class _ShopScreenState extends State<ShopScreen> {
-  final MapController mapController = MapController();
-  Position? currentPosition;
-  String locationText1 = 'Fetching location...';
-  String locationText2 = '';
-  String locationText3 = '';
+  // State Variables
+  final MapController _mapController = MapController();
+  Position? _currentPosition;
+  String _locationText1 = 'Fetching location...';
+  String _locationText2 = '';
+  String _locationText3 = '';
+  int _selectedServiceIndex = 0;
+  bool _isToggleRight = false;
 
   @override
   void initState() {
@@ -25,391 +27,197 @@ class _ShopScreenState extends State<ShopScreen> {
     _getCurrentLocation();
   }
 
-  Future<void> _getCurrentLocation() async {
-    bool serviceEnabled;
-    LocationPermission permission;
+  // --- LOGIC ---
 
-    // Check if location services are enabled
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+  Future<void> _getCurrentLocation() async {
+    // This logic remains unchanged
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      setState(() {
-        locationText1 = 'Location services disabled';
-      });
+      if (mounted) setState(() => _locationText1 = 'Location services disabled');
       return;
     }
 
-    // Check and request location permissions
-    permission = await Geolocator.checkPermission();
+    LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        setState(() {
-          locationText1 = 'Location permissions denied';
-        });
+        if (mounted) setState(() => _locationText1 = 'Location permissions denied');
         return;
       }
     }
 
     if (permission == LocationPermission.deniedForever) {
-      setState(() {
-        locationText1 = 'Location permissions permanently denied';
-      });
+      if (mounted) setState(() => _locationText1 = 'Location permissions permanently denied');
       return;
     }
 
-    // Fetch current position
     try {
-      currentPosition = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-      print('Current Position: ${currentPosition!.latitude}, ${currentPosition!.longitude}'); // Debug log
-
-      // Get placemark from coordinates
+      _currentPosition = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
       List<Placemark> placemarks = await placemarkFromCoordinates(
-        currentPosition!.latitude,
-        currentPosition!.longitude,
+        _currentPosition!.latitude,
+        _currentPosition!.longitude,
       );
-      if (placemarks.isNotEmpty) {
-        Placemark place = placemarks[0];
-        setState(() {
-          locationText1 = '${place.locality ?? 'Unknown'} - ${place.postalCode ?? ''}';
-          locationText2 = place.subLocality ?? place.street ?? '';
-          locationText3 = 'Near ${place.name ?? place.thoroughfare ?? ''}';
-        });
-      } else {
-        setState(() {
-          locationText1 = 'No location data available';
-        });
-      }
 
-      // Update map to exact current location with higher zoom
-      mapController.move(LatLng(currentPosition!.latitude, currentPosition!.longitude), 16.0);
+      if (mounted) {
+        if (placemarks.isNotEmpty) {
+          Placemark place = placemarks[0];
+          setState(() {
+            _locationText1 = '${place.locality ?? 'Unknown'} - ${place.postalCode ?? ''}';
+            _locationText2 = place.subLocality ?? place.street ?? '';
+            _locationText3 = 'Near ${place.name ?? place.thoroughfare ?? ''}';
+          });
+        } else {
+          setState(() => _locationText1 = 'No location data available');
+        }
+        _mapController.move(LatLng(_currentPosition!.latitude, _currentPosition!.longitude), 16.0);
+      }
     } catch (e) {
-      print('Error fetching location: $e'); // Debug log
-      setState(() {
-        locationText1 = 'Error fetching location';
-      });
+      if (mounted) setState(() => _locationText1 = 'Error fetching location');
     }
   }
+
+  void _toggleVideoIconPosition() {
+    setState(() => _isToggleRight = !_isToggleRight);
+  }
+
+  // --- UI BUILDER METHODS ---
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
+          // Main Content Layout
           Column(
             children: [
-              // Top Map and Location/Filters Section
-              Container(
-                height: MediaQuery.of(context).size.height * 0.4, // Adjust height as needed
-                color: Colors.grey[200], // Placeholder for map background
-                child: Stack(
-                  children: [
-                    // FlutterMap with Geoapify tiles and marker
-                    Positioned.fill(
-                      child: FlutterMap(
-                        mapController: mapController,
-                        options: MapOptions(
-                          initialCenter: const LatLng(0, 0),
-                          initialZoom: 2.0,
-                          onMapReady: () {
-                            if (currentPosition != null) {
-                              mapController.move(LatLng(currentPosition!.latitude, currentPosition!.longitude), 16.0);
-                            }
-                          },
-                        ),
-                        children: [
-                          TileLayer(
-                            urlTemplate: 'https://maps.geoapify.com/v1/tile/osm-carto/{z}/{x}/{y}.png?apiKey={apiKey}',
-                            additionalOptions: const {
-                              'apiKey': '2a411b50aafc4c1996eca70d594a314c', // Replace with your Geoapify API key
-                            },
-                          ),
-                          MarkerLayer(
-                            markers: currentPosition != null
-                                ? [
-                              Marker(
-                                point: LatLng(currentPosition!.latitude, currentPosition!.longitude),
-                                width: 40.0,
-                                height: 40.0,
-                                child: const Icon(
-                                  Icons.location_pin,
-                                  color: Colors.red,
-                                  size: 40,
-                                ),
-                              ),
-                            ]
-                                : [],
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Location and Filters Bar overlaying the map
-                    Positioned(
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF00B3A7), // Teal color from image
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(30),
-                            topRight: Radius.circular(30),
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.3),
-                              spreadRadius: 2,
-                              blurRadius: 5,
-                              offset: const Offset(0, -3),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 20,
-                                    height: 20,
-                                    decoration: const BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: Colors.white, // White circle for location icon
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        locationText1,
-                                        style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                                      ),
-                                      Text(
-                                        locationText2,
-                                        style: const TextStyle(color: Colors.white70, fontSize: 12),
-                                      ),
-                                      Text(
-                                        locationText3,
-                                        style: const TextStyle(color: Colors.white70, fontSize: 12),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2), // Semi-transparent white for filters
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Row(
-                                children: const [
-                                  Text('Filters', style: TextStyle(color: Colors.white, fontSize: 14)),
-                                  SizedBox(width: 4),
-                                  Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 20),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Scrollable List of Business Cards
-              Expanded(
-                child: Container(
-                  color: Colors.white, // Background for the cards section
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16.0),
-                    itemCount: 5, // Example: 5 business cards
-                    itemBuilder: (context, index) {
-                      return _buildBusinessCard(context);
-                    },
-                  ),
-                ),
-              ),
-
-              // Spacer for the custom bottom bar
-              const SizedBox(height: 150), // Adjust height to match your custom bottom bar
+              _buildMapSection(),
+              _buildBusinessCardList(),
+              const SizedBox(height: 220), // Spacer for the tall bottom nav bar
             ],
           ),
-
-          // Back Button (Top Left)
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 10, // Adjust top padding for status bar
-            left: 10,
-            child: GestureDetector(
-              onTap: () {
-                Navigator.pop(context); // Go back to the previous screen (HomeScreenCategoryScreen)
-              },
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.4), // Semi-transparent black background
-                  borderRadius: BorderRadius.circular(20), // Rounded corners
-                ),
-                child: const Icon(
-                  Icons.arrow_back,
-                  color: Colors.white,
-                  size: 24,
-                ),
-              ),
-            ),
-          ),
-
-          // New: Top Right Button to navigate to Shop2Screen
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 10, // Adjust top padding for status bar
-            right: 10,
-            child: GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const Shop2Screen()), // Navigate to Shop2Screen
-                );
-              },
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.4), // Semi-transparent black background
-                  borderRadius: BorderRadius.circular(20), // Rounded corners
-                ),
-                child: const Icon(
-                  Icons.arrow_forward, // Forward arrow icon
-                  color: Colors.white,
-                  size: 24,
-                ),
-              ),
-            ),
-          ),
-
-          // Custom Bottom Navigation Bar (Request Now, Microphone, User Icons)
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              height: 150, // Total height of the custom bottom section
-              decoration: BoxDecoration(
-                color: const Color(0xFF00B3A7), // Teal color
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(30),
-                  topRight: Radius.circular(30),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.3),
-                    spreadRadius: 2,
-                    blurRadius: 5,
-                    offset: const Offset(0, -3),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  // Request Now button with user icons
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                    child: Row(
-                      children: [
-                        // Three user icons
-                        _buildUserIconSmall(),
-                        _buildUserIconSmall(),
-                        _buildUserIconSmall(),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () {
-                              print('Request Now tapped');
-                              // TODO: Implement request functionality
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green, // Green color for button
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 15),
-                              elevation: 3,
-                            ),
-                            child: const Text(
-                              'Request Now',
-                              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        // Microphone icon
-                        Container(
-                          width: 50,
-                          height: 50,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
-                                spreadRadius: 1,
-                                blurRadius: 3,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: const Icon(Icons.mic, color: Colors.black, size: 30),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Bottom row of icons
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildBottomNavIcon(Icons.settings, 'Settings', 0),
-                      _buildBottomNavIcon(Icons.person, '200', 1),
-                      _buildBottomNavIcon(Icons.person, '200', 2),
-                      _buildBottomNavIcon(Icons.person, '200', 3),
-                      _buildBottomNavIcon(Icons.image, '200', 4),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
+          // Overlaid UI Elements
+          _buildBackButton(),
+          _buildBottomNavigationBar(),
         ],
       ),
     );
   }
 
-  // Helper for small user icons
-  Widget _buildUserIconSmall() {
+  /// Builds the top section containing the map and the location info bar.
+  Widget _buildMapSection() {
     return Container(
-      width: 30,
-      height: 30,
-      margin: const EdgeInsets.symmetric(horizontal: 2),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.white,
-        border: Border.all(color: Colors.black, width: 1),
+      height: MediaQuery.of(context).size.height * 0.4,
+      color: Colors.grey[200],
+      child: Stack(
+        children: [
+          FlutterMap(
+            mapController: _mapController,
+            options: MapOptions(
+              initialCenter: const LatLng(28.7041, 77.1025), // Default to Delhi
+              initialZoom: 11.0,
+            ),
+            children: [
+              TileLayer(
+                urlTemplate: 'https://maps.geoapify.com/v1/tile/osm-carto/{z}/{x}/{y}.png?apiKey={apiKey}',
+                additionalOptions: const {'apiKey': '2a411b50aafc4c1996eca70d594a314c'},
+              ),
+              if (_currentPosition != null)
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+                      width: 40.0,
+                      height: 40.0,
+                      child: const Icon(Icons.location_pin, color: Colors.red, size: 40),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+          _buildLocationInfoBar(),
+        ],
       ),
-      child: Center(
-        child: Image.asset(
-          'assets/icons/man.png', // Using man.png for user icon
-          width: 20,
-          height: 20,
-          fit: BoxFit.contain,
+    );
+  }
+
+  /// Builds the location info bar that overlays the map.
+  Widget _buildLocationInfoBar() {
+    return Positioned(
+      bottom: 0,
+      left: 0,
+      right: 0,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+        decoration: BoxDecoration(
+          color: const Color(0xFF00B3A7),
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(30),
+            topRight: Radius.circular(30),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              spreadRadius: 2,
+              blurRadius: 5,
+              offset: const Offset(0, -3),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 20,
+              height: 20,
+              decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(_locationText1, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                  Text(_locationText2, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                  Text(_locationText3, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                children: const [
+                  Text('Filters', style: TextStyle(color: Colors.white, fontSize: 14)),
+                  SizedBox(width: 4),
+                  Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 20),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  // Helper for business cards
+  /// Builds the scrollable list of business cards.
+  Widget _buildBusinessCardList() {
+    return Expanded(
+      child: Container(
+        color: Colors.white,
+        child: ListView.builder(
+          padding: const EdgeInsets.all(16.0),
+          itemCount: 5,
+          itemBuilder: (context, index) => _buildBusinessCard(context),
+        ),
+      ),
+    );
+  }
+
+  /// Builds a single business card item.
   Widget _buildBusinessCard(BuildContext context) {
+    // This function builds one card, so it's already well-separated.
     return Container(
       margin: const EdgeInsets.only(bottom: 16.0),
       padding: const EdgeInsets.all(16.0),
@@ -417,45 +225,31 @@ class _ShopScreenState extends State<ShopScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            spreadRadius: 2,
-            blurRadius: 5,
-            offset: const Offset(0, 3),
-          ),
+          BoxShadow(color: Colors.black.withOpacity(0.1), spreadRadius: 2, blurRadius: 5, offset: const Offset(0, 3)),
         ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Left Image and Add Button
           Column(
             children: [
               Container(
                 width: 100,
                 height: 100,
                 decoration: BoxDecoration(
-                  color: Colors.grey[200], // Placeholder for business card image
+                  color: Colors.grey[200],
                   borderRadius: BorderRadius.circular(10),
-                  image: const DecorationImage(
-                    image: AssetImage('assets/icons/business_card_placeholder.png'), // Replace with actual business card image
-                    fit: BoxFit.cover,
-                  ),
+                  image: const DecorationImage(image: AssetImage('assets/icons/business_card_placeholder.png'), fit: BoxFit.cover),
                 ),
               ),
               const SizedBox(height: 8),
               SizedBox(
                 width: 100,
                 child: ElevatedButton(
-                  onPressed: () {
-                    print('Add button tapped');
-                    // TODO: Implement add functionality
-                  },
+                  onPressed: () {},
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green, // Green color for add button
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                    backgroundColor: Colors.green,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     padding: const EdgeInsets.symmetric(vertical: 8),
                   ),
                   child: const Text('Add', style: TextStyle(color: Colors.white, fontSize: 14)),
@@ -464,15 +258,11 @@ class _ShopScreenState extends State<ShopScreen> {
             ],
           ),
           const SizedBox(width: 16),
-          // Right Content (Business Card details)
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Business Card',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
+                const Text('Business Card', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 Row(
                   children: const [
@@ -489,17 +279,12 @@ class _ShopScreenState extends State<ShopScreen> {
                 Align(
                   alignment: Alignment.bottomRight,
                   child: ElevatedButton.icon(
-                    onPressed: () {
-                      print('Request Now tapped for card');
-                      // TODO: Implement request functionality for this card
-                    },
+                    onPressed: () {},
                     icon: const Icon(Icons.send, color: Colors.white, size: 20),
                     label: const Text('Request Now', style: TextStyle(color: Colors.white, fontSize: 14)),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green, // Green color for request button
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
+                      backgroundColor: Colors.green,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                       padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
                     ),
                   ),
@@ -512,24 +297,135 @@ class _ShopScreenState extends State<ShopScreen> {
     );
   }
 
-  // Helper for bottom navigation icons
-  Widget _buildBottomNavIcon(IconData icon, String label, int index) {
+  /// Builds the back button that overlays the top-left of the screen.
+  Widget _buildBackButton() {
+    return Positioned(
+      top: MediaQuery.of(context).padding.top + 10,
+      left: 10,
+      child: GestureDetector(
+        onTap: () => Navigator.of(context).pop(),
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.4),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
+        ),
+      ),
+    );
+  }
+
+  /// Builds the entire two-part bottom navigation bar.
+  Widget _buildBottomNavigationBar() {
+    return Positioned(
+      bottom: 0,
+      left: 0,
+      right: 0,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(color: Colors.grey.withOpacity(0.3), spreadRadius: 2, blurRadius: 10, offset: const Offset(0, -5)),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildServiceIconRow(), // Section 1
+            _buildToggleBar(),      // Section 2
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Builds the top row of the bottom navigation bar (circular service icons).
+  Widget _buildServiceIconRow() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildServiceIcon('assets/icons/setting.png', 'Setting', 0),
+          _buildServiceIcon('assets/icons/low.png', 'Low', 1),
+          _buildServiceIcon('assets/icons/home.png', 'Home', 2),
+          _buildServiceIcon('assets/icons/cart.png', 'Cart', 3),
+          _buildServiceIcon('assets/icons/parcel.png', 'Parcel', 4),
+          _buildServiceIcon('assets/icons/doctor.png', 'Doctor', 5),
+        ],
+      ),
+    );
+  }
+
+  /// Builds the bottom row of the bottom navigation bar (profile, toggle, box).
+  Widget _buildToggleBar() {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFF00B3A7),
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(30),
+          topRight: Radius.circular(30),
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(vertical: 5.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          Image.asset('assets/icons/profile_placeholder.png', width: 50, height: 50),
+          GestureDetector(
+            onTap: _toggleVideoIconPosition,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Image.asset('assets/icons/toggle.png', width: 90, height: 60),
+                AnimatedPositioned(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                  left: _isToggleRight ? null : 0,
+                  right: _isToggleRight ? 0 : null,
+                  child: Image.asset('assets/icons/video_icon.png', width: 50, height: 63),
+                ),
+              ],
+            ),
+          ),
+          Image.asset('assets/icons/box.png', width: 50, height: 50),
+        ],
+      ),
+    );
+  }
+
+  /// Builds a single circular service icon for the top row of the nav bar.
+  Widget _buildServiceIcon(String imagePath, String label, int index) {
+    bool isSelected = _selectedServiceIndex == index;
     return GestureDetector(
-      onTap: () {
-        // TODO: Implement navigation for these icons
-        print('Bottom nav icon tapped: $label');
-      },
+      onTap: () => setState(() => _selectedServiceIndex = index),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            color: Colors.white, // All icons are white as per image
-            size: 30,
+          Container(
+            padding: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              color: isSelected ? Colors.red : const Color(0xFF00B3A7),
+              shape: BoxShape.circle,
+            ),
+            child: CircleAvatar(
+              radius: 25,
+              backgroundColor: Colors.white,
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Image.asset(imagePath, fit: BoxFit.contain),
+              ),
+            ),
           ),
+          const SizedBox(height: 6),
           Text(
             label,
-            style: const TextStyle(color: Colors.white, fontSize: 10),
+            style: TextStyle(
+              color: isSelected ? Colors.black : Colors.grey.shade600,
+              fontSize: 12,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            ),
           ),
         ],
       ),
