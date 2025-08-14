@@ -92,7 +92,6 @@ class _ShopScreenState extends State<ShopScreen> {
             children: [
               _buildMapSection(),
               _buildBusinessCardList(),
-              const SizedBox(height: 220), // Spacer for the tall bottom nav bar
             ],
           ),
           // Overlaid UI Elements
